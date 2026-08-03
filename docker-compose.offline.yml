@@ -1,0 +1,8 @@
+services:
+  backend:
+    build:
+      dockerfile: Dockerfile.offline
+
+  frontend:
+    build:
+      dockerfile: Dockerfile.static

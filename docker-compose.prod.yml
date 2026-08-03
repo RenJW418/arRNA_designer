@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    restart: unless-stopped
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "8008:8080"

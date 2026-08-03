@@ -2,6 +2,8 @@ import { ArrowRight, BookOpen, Dna, LockKeyhole, Microscope } from "lucide-react
 import { useState } from "react";
 import { DesignWorkspace } from "./components/DesignWorkspace";
 
+const API_DOCS_URL = import.meta.env.VITE_API_DOCS_URL ?? "/docs";
+
 export function App() {
   const [started, setStarted] = useState(false);
 
@@ -16,7 +18,7 @@ export function App() {
         <nav aria-label="Primary navigation">
           <a href="#method">Method</a>
           <a href="#privacy">Data privacy</a>
-          <a href="http://127.0.0.1:8010/docs" target="_blank" rel="noreferrer">
+          <a href={API_DOCS_URL} target="_blank" rel="noreferrer">
             API
           </a>
         </nav>
