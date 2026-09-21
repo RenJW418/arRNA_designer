@@ -1,0 +1,10 @@
+# The working tree was created on Windows, where core.autocrlf hid the fact that
+# these files are stored with LF. Normalize text so the same checkout is clean on
+# every platform, and keep the generated rule data and vector assets byte-stable.
+* text=auto eol=lf
+
+*.png binary
+*.pdf binary
+*.ai  binary
+*.woff  binary
+*.woff2 binary
