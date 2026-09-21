@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   Bulge,
+  type RelativeEffectZone,
+  TARGET_COORDINATE,
   chunkSequenceForDisplay,
+  effectAtCoordinate,
   createAutoMismatchSequence,
   createAbsoluteEffectZoneInterval,
   createBulgeOverviewGeometry,
@@ -37,6 +40,16 @@ describe("Bulge", () => {
     assert.equal(bulge.effectAt(106), "increase");
     assert.equal(bulge.effectAt(98), null);
   });
+
+  it("reads the direction at A0 for a placement that has no Bulge instance yet", () => {
+    const effectZones: RelativeEffectZone[] = [
+      { anchor: "start", minDistance: 3, maxDistance: 9, effect: "decrease" },
+    ];
+
+    // start -6 puts the core-decrease range over A0; start -20 keeps it clear.
+    assert.equal(effectAtCoordinate({ start: -6, size: 4, effectZones }, TARGET_COORDINATE), "decrease");
+    assert.equal(effectAtCoordinate({ start: -20, size: 4, effectZones }, TARGET_COORDINATE), null);
+  });
 });
 
 describe("initial bulges", () => {
@@ -62,6 +75,19 @@ describe("bulge placement", () => {
 
     assert.equal(validateBulgePlacement(existing, { start: 14, size: 3 }).valid, false);
     assert.equal(validateBulgePlacement(existing, { start: 15, size: 3 }).valid, true);
+  });
+
+  it("rejects any structure covering the target A0 but allows the flanking positions", () => {
+    assert.equal(validateBulgePlacement([], { start: 0, size: 1 }).valid, false);
+    assert.equal(validateBulgePlacement([], { start: 0, size: 5 }).valid, false);
+    assert.equal(validateBulgePlacement([], { start: -2, size: 5 }).valid, false);
+    assert.equal(validateBulgePlacement([], { start: -1, size: 1 }).valid, true);
+    assert.equal(validateBulgePlacement([], { start: 1, size: 1 }).valid, true);
+    assert.equal(validateBulgePlacement([], { start: -28, size: 28 }).valid, true);
+
+    const result = validateBulgePlacement([], { start: -4, size: 5 });
+    assert.equal(result.valid, false);
+    assert.match(result.reason ?? "", /A0/);
   });
 
   it("counts initial and user bulges toward the four-bulge maximum", () => {

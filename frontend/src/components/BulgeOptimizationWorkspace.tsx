@@ -16,11 +16,13 @@ import {
   BulgeCandidate,
   BulgeType,
   MAX_BULGES,
+  TARGET_COORDINATE,
   chunkSequenceForDisplay,
   createAutoMismatchSequence,
   createInitialBulges,
   createOptimizationEvidenceState,
   createZeroInitializedEfficiencies,
+  effectAtCoordinate,
   evaluateQualitativeEffect,
   getBulgeCandidates,
   OptimizationEvidenceState,
@@ -58,6 +60,17 @@ interface PlacementPreview {
   start: number;
   valid: boolean;
   reason?: string;
+}
+
+// A placement whose effect range reaches A0 with a core-decrease direction is
+// allowed, but the user is told it may lower target editing before they commit.
+const TARGET_DECREASE_WARNING = "This placement puts A0 in a core-decrease range and may reduce target A editing.";
+
+function decreasesTarget(candidate: BulgeCandidate, start: number): boolean {
+  return effectAtCoordinate(
+    { start, size: candidate.size, effectZones: candidate.effectZones },
+    TARGET_COORDINATE,
+  ) === "decrease";
 }
 
 function formatCoordinate(coordinate: number): string {
@@ -282,7 +295,14 @@ export function BulgeOptimizationWorkspace({
       return;
     }
     const validation = validateBulgePlacement(bulges, { start, size: candidate.size });
-    setPlacementPreview({ candidate, start, ...validation });
+    setPlacementPreview({
+      candidate,
+      start,
+      ...validation,
+      reason: validation.valid
+        ? (decreasesTarget(candidate, start) ? l(TARGET_DECREASE_WARNING) : undefined)
+        : validation.reason && l(validation.reason),
+    });
   }
 
   function placeCandidate(candidate: BulgeCandidate, start: number) {
@@ -309,7 +329,8 @@ export function BulgeOptimizationWorkspace({
     });
     setBulges((current) => [...current, next]);
     setFocusedBulgeId(next.id);
-    setPlacementMessage(`${candidate.label} added at ${formatCoordinate(start)}–${formatCoordinate(next.end)}.`);
+    const warning = decreasesTarget(candidate, start) ? ` ${l(TARGET_DECREASE_WARNING)}` : "";
+    setPlacementMessage(`${candidate.label} added at ${formatCoordinate(start)}–${formatCoordinate(next.end)}.${warning}`);
     setPlacementPreview(null);
     setSelectedCandidateId(null);
     if (next.type === "mismatch") {

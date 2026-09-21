@@ -160,15 +160,7 @@ export class Bulge {
   }
 
   effectAt(targetCoordinate: number): QualitativeDirection | null {
-    for (const zone of this.effectZones) {
-      const distance = zone.anchor === "start"
-        ? targetCoordinate - this.start
-        : zone.anchor === "upstream-edge"
-          ? this.start - targetCoordinate
-          : targetCoordinate - this.end;
-      if (distance >= zone.minDistance && distance <= zone.maxDistance) return zone.effect;
-    }
-    return null;
+    return effectAtCoordinate(this, targetCoordinate);
   }
 
   withMismatchBases(mismatchBases: string): Bulge {
@@ -176,7 +168,29 @@ export class Bulge {
   }
 }
 
+// Shared by Bulge.effectAt and by callers that must read an effect direction
+// before a Bulge instance exists, such as a drag-over placement preview.
+export function effectAtCoordinate(
+  placement: { start: number; size: number; effectZones: RelativeEffectZone[] },
+  targetCoordinate: number,
+): QualitativeDirection | null {
+  const end = placement.start + placement.size - 1;
+  for (const zone of placement.effectZones) {
+    const distance = zone.anchor === "start"
+      ? targetCoordinate - placement.start
+      : zone.anchor === "upstream-edge"
+        ? placement.start - targetCoordinate
+        : targetCoordinate - end;
+    if (distance >= zone.minDistance && distance <= zone.maxDistance) return zone.effect;
+  }
+  return null;
+}
+
 export const MAX_BULGES = 4;
+
+// The selected target adenosine A0 is the origin of the refinement coordinate
+// system; upstream positions are negative and downstream positions positive.
+export const TARGET_COORDINATE = 0;
 
 export function chunkSequenceForDisplay<T>(items: T[], rowSize: number): T[][] {
   if (!Number.isInteger(rowSize) || rowSize < 1) throw new Error("Sequence row size must be a positive integer.");
@@ -303,6 +317,9 @@ export function validateBulgePlacement(
 ): PlacementValidation {
   if (!Number.isInteger(proposed.start) || !Number.isInteger(proposed.size) || proposed.size < 1) {
     return { valid: false, reason: "Bulge position and size must be positive-integer sequence coordinates." };
+  }
+  if (proposed.start <= TARGET_COORDINATE && proposed.start + proposed.size - 1 >= TARGET_COORDINATE) {
+    return { valid: false, reason: "A bulge structure cannot cover the target A0. Place it entirely upstream or downstream." };
   }
   if (existing.length >= maximum) {
     return { valid: false, reason: `A design may contain no more than four bulges, including the starting arRNA.` };
