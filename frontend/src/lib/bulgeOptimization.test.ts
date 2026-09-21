@@ -17,6 +17,7 @@ import {
   evaluateQualitativeEffect,
   getBulgeCandidates,
   getCoreEffectZones,
+  removeRemovableBulge,
   validateBulgePlacement,
   validateMismatchSequence,
 } from "./bulgeOptimization.ts";
@@ -88,6 +89,18 @@ describe("bulge placement", () => {
     const result = validateBulgePlacement([], { start: -4, size: 5 });
     assert.equal(result.valid, false);
     assert.match(result.reason ?? "", /A0/);
+  });
+
+  it("removes a user bulge but keeps a structure carried in from the tested arRNA", () => {
+    const make = (id: string, source: "initial" | "user") => new Bulge({
+      id, type: "deletion", start: 10, size: 2, source, effectZones: [],
+    });
+    const bulges = [make("initial-1", "initial"), make("user-1", "user")];
+
+    assert.deepEqual(removeRemovableBulge(bulges, "user-1").map(({ id }) => id), ["initial-1"]);
+    // The starting structure describes what was assayed; it cannot be dropped.
+    assert.deepEqual(removeRemovableBulge(bulges, "initial-1").map(({ id }) => id),
+      ["initial-1", "user-1"]);
   });
 
   it("counts initial and user bulges toward the four-bulge maximum", () => {

@@ -23,6 +23,7 @@ import {
   createOptimizationEvidenceState,
   createZeroInitializedEfficiencies,
   effectAtCoordinate,
+  removeRemovableBulge,
   evaluateQualitativeEffect,
   getBulgeCandidates,
   OptimizationEvidenceState,
@@ -342,7 +343,10 @@ export function BulgeOptimizationWorkspace({
   }
 
   function removeBulge(id: string) {
-    setBulges((current) => current.filter((bulge) => bulge.id !== id));
+    // Structures carried in from the tested arRNA are fixed: they describe what
+    // was actually assayed, so they can be neither removed nor resized. The UI
+    // only offers the control for user-added bulges; this enforces it.
+    setBulges((current) => removeRemovableBulge(current, id));
     setFocusedBulgeId((current) => current === id ? null : current);
     setAppliedRecommendationId(null);
     if (editingMismatchId === id) {

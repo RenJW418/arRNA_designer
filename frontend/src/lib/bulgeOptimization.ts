@@ -331,6 +331,13 @@ export function validateBulgePlacement(
   return { valid: true };
 }
 
+// Structures carried in from the tested arRNA describe what was actually
+// assayed, so they can be neither removed nor resized; only user-added bulges
+// can be taken away again.
+export function removeRemovableBulge(bulges: Bulge[], id: string): Bulge[] {
+  return bulges.filter((bulge) => bulge.id !== id || bulge.source === "initial");
+}
+
 export function createInitialBulges(
   deletionCoordinates: number[],
   environment: AdarEnvironment = "ADAR1",
