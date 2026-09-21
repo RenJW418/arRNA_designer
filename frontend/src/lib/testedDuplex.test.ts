@@ -4,6 +4,7 @@ import {
   createTestedDuplex,
   createGeneratedTestedDuplex,
   normalizeTestedSequence,
+  reviewTestedDuplex,
 } from "./testedDuplex.ts";
 import { designInitialArrna, designNormalArrnaVariants } from "./normalEditing.ts";
 
@@ -103,5 +104,36 @@ describe("tested target-arRNA alignment", () => {
 
     assert.ok(duplex.initialBulges.some(({ type, size }) => type === "deletion" && size === 10));
     assert.equal(duplex.arrnaSequence, generated.arrnaSequence);
+  });
+
+  it("keeps the exact generated alignment when unchanged repetitive sequences are reviewed", () => {
+    const motif = "ATCATCGTAGCTACGTAGCTAGCTGATCGTGACGTAGCTAGCTGACTGTCAGCTAGCTGATCG";
+    const target = motif.repeat(6).slice(0, 360);
+    const targetAPosition = 80;
+    const initial = designInitialArrna(target, targetAPosition);
+    assert.ok(initial);
+    const generated = designNormalArrnaVariants(initial).find(({ id }) => id === "upstream-del28");
+    assert.ok(generated);
+    const prepared = createGeneratedTestedDuplex({
+      targetSequence: target,
+      arrnaSequence: generated.arrnaSequence,
+      targetAPosition,
+      environment: "ADAR1",
+      targetWindow: initial.targetWindow,
+      alignedGuide: generated.alignedGuide,
+      windowStart: initial.windowStart,
+      targetIndex: initial.targetIndex,
+      deletionCoordinates: generated.deletionCoordinates,
+    });
+
+    const reviewed = reviewTestedDuplex({
+      targetSequence: target,
+      arrnaSequence: generated.arrnaSequence,
+      targetAPosition,
+      environment: "ADAR1",
+    }, prepared);
+
+    assert.strictEqual(reviewed, prepared);
+    assert.equal(reviewed.alignedGuide[reviewed.targetIndex], "C");
   });
 });

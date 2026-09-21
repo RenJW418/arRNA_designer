@@ -269,6 +269,26 @@ export function createTestedDuplex(input: TestedDuplexInput): TestedDuplex {
   };
 }
 
+/**
+ * Review a tested duplex while preserving a generated design's exact alignment.
+ * Re-inference is needed only after the user changes one of the defining inputs.
+ */
+export function reviewTestedDuplex(
+  input: TestedDuplexInput,
+  preparedDuplex?: TestedDuplex | null,
+): TestedDuplex {
+  const targetSequence = normalizeTestedSequence(input.targetSequence);
+  const arrnaSequence = normalizeTestedSequence(input.arrnaSequence);
+  if (preparedDuplex
+    && preparedDuplex.targetSequence === targetSequence
+    && preparedDuplex.arrnaSequence === arrnaSequence
+    && preparedDuplex.targetAPosition === input.targetAPosition
+    && preparedDuplex.environment === input.environment) {
+    return preparedDuplex;
+  }
+  return createTestedDuplex({ ...input, targetSequence, arrnaSequence });
+}
+
 export function createGeneratedTestedDuplex(input: GeneratedDuplexInput): TestedDuplex {
   const targetSequence = normalizeTestedSequence(input.targetSequence);
   const targetWindow = normalizeTestedSequence(input.targetWindow);

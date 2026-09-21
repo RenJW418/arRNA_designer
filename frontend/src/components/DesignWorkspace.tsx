@@ -11,6 +11,7 @@ import type { DesignExample } from "../lib/examples";
 import type { TestedDuplexSeed } from "../lib/testedDuplex";
 import { InfoTip } from "./InfoTip";
 import { useLanguage } from "./LanguageProvider";
+import { TaskInputShell, type TaskStep } from "./TaskLayout";
 
 type Mode = "sequence" | "gene";
 export type Application = "normal_editing" | "exon_skipping";
@@ -25,7 +26,7 @@ interface Props {
 export function DesignWorkspace({ onExit, onRefine, initialExample, initialApplication = "normal_editing" }: Props) {
   const { l } = useLanguage();
   const [mode, setMode] = useState<Mode>(initialExample?.mode ?? "sequence");
-  const [application, setApplication] = useState<Application>(initialExample?.application ?? initialApplication);
+  const application = initialExample?.application ?? initialApplication;
   const [sequence, setSequence] = useState(initialExample?.sequence ?? "");
   const [position, setPosition] = useState(String(initialExample?.position ?? 1));
   const [gene, setGene] = useState(initialExample?.gene ?? "DMD");
@@ -204,27 +205,31 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
     );
   }
 
+  const hasInput = application === "normal_editing"
+    ? mode === "gene" ? Boolean(normalReference) : Boolean(cleanSequence) && !invalidSequence && inFrame
+    : mode === "gene" ? Boolean(reference) : exonSequences.every(Boolean) && !invalidExonSequence;
+  const hasTarget = application === "normal_editing" ? Boolean(selectedSite) : mode === "gene" ? Number(exonNumber) > 1 : Boolean(targetExon);
+  const currentStep = !hasInput ? 0 : !hasTarget ? 1 : 3;
+  const stepLabels = application === "normal_editing"
+    ? ["Input sequence", "Select target A", "Design settings", "Run"]
+    : ["Input reference", "Select exon", "Design settings", "Run"];
+  const taskSteps: TaskStep[] = stepLabels.map((label, index) => ({
+    label: l(label),
+    state: index < currentStep ? "complete" : index === currentStep ? "current" : "pending",
+  }));
+
   return (
-    <section className="workspace">
-      <button className="back-button" onClick={onExit}>
+    <TaskInputShell
+      back={<button className="back-button" type="button" onClick={onExit}>
         <ArrowLeft aria-hidden="true" size={16} /> {l("Back to overview")}
-      </button>
-      <div className="workspace-heading">
-        <div>
-          <p className="eyebrow">{l("New design · Scientific workflow")}</p>
-          <h1>{l("Define the editing target")}</h1>
-        </div>
-      </div>
-
-      {initialExample && <div className="example-loaded" role="status"><strong>{l(`${initialExample.title} loaded`)}</strong><span>{l(initialExample.description)} {l("Example data.")}</span></div>}
-
-      <ol className="workflow-progress" aria-label={l("Design workflow")}>
-        <li aria-current="step"><span>1</span><strong>{l("Define target")}</strong></li>
-        <li><span>2</span><strong>{l("Review structure")}</strong></li>
-        <li><span>3</span><strong>{l("Generate candidates")}</strong></li>
-      </ol>
-
-      <form onSubmit={submit}>
+      </button>}
+      title={l(application === "normal_editing" ? "Normal editing design" : "Exon skipping design")}
+      description={l(application === "normal_editing" ? "Choose a target A and generate the available initial arRNA designs." : "Define an exon context and generate SA or ESE coverage candidates.")}
+      steps={taskSteps}
+      stepsLabel={l("Design progress")}
+      notice={initialExample ? <div className="example-loaded" role="status"><strong>{l(`${initialExample.title} loaded`)}</strong><span>{l(initialExample.description)} {l("Example data.")}</span></div> : undefined}
+    >
+      <form className="task-design-form" onSubmit={submit} aria-busy={loading}>
         <fieldset className="mode-picker">
           <legend>{l("Choose an input mode")}</legend>
           <label className={mode === "sequence" ? "mode-option selected" : "mode-option"}>
@@ -239,7 +244,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
           </label>
         </fieldset>
 
-        <div className="workspace-grid">
+        <div className="workspace-grid task-workspace-grid">
           <div className="form-panel">
             {mode === "sequence" && application === "normal_editing" ? (
               <>
@@ -305,24 +310,18 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
               </div>
             )}
 
-            <fieldset className="application-picker">
-              <legend>{l("Application type")}</legend>
-              <label><input type="radio" checked={application === "normal_editing"} onChange={() => setApplication("normal_editing")} /> {l("Normal editing")}</label>
-              <label><input type="radio" checked={application === "exon_skipping"} onChange={() => setApplication("exon_skipping")} /> {l("Exon skipping")}</label>
-            </fieldset>
-
             {application === "normal_editing" && <fieldset className="adar-picker">
-              <legend>{l("ADAR environment")}</legend>
-              <label className={adarEnvironment === "ADAR1" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR1"} onChange={() => setAdarEnvironment("ADAR1")} /><span><strong>ADAR1</strong><small>5′ ≥4 {l("paired nt")} · 3′ ≥20 {l("paired nt")}</small></span></label>
-              <label className={adarEnvironment === "ADAR2" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR2"} onChange={() => setAdarEnvironment("ADAR2")} /><span><strong>ADAR2</strong><small>5′ ≥6 {l("paired nt")} · 3′ ≥11 {l("paired nt")}</small></span></label>
+              <legend>{l("ADAR environment")} <InfoTip>ADAR1: arRNA 5′ ≥4 nt · 3′ ≥20 nt; ADAR2: arRNA 5′ ≥6 nt · 3′ ≥11 nt {l("paired nt")}</InfoTip></legend>
+              <label className={adarEnvironment === "ADAR1" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR1"} onChange={() => setAdarEnvironment("ADAR1")} /><span><strong>ADAR1</strong></span></label>
+              <label className={adarEnvironment === "ADAR2" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR2"} onChange={() => setAdarEnvironment("ADAR2")} /><span><strong>ADAR2</strong></span></label>
             </fieldset>}
 
             {application === "exon_skipping" && (
-              <div className="length-control">
+              <details className="simple-disclosure"><summary>{l("Advanced settings")} · {arrnaLength} nt</summary><div className="length-control">
                 <label htmlFor="arrna-length">arRNA length x <span>{l("default 151 nt")}</span></label>
                 <input id="arrna-length" type="number" min="21" max="1001" value={arrnaLength} onChange={(event) => setArrnaLength(event.target.value)} />
                 <small>{l("Exons are classified as < x/2, x/2–x, or > x.")}</small>
-              </div>
+              </div></details>
             )}
 
             {requestError && <p className="request-error" role="alert">{requestError}</p>}
@@ -332,12 +331,12 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
             </button>
           </div>
           <div className="workspace-preview-stack">
-            <DesignPreview
+            <details className="simple-disclosure design-figure-disclosure"><summary>{l("View design principles")}</summary><DesignPreview
               mode={mode}
               application={application}
               sequence={cleanSequence}
               position={Number(position)}
-            />
+            /></details>
             {application === "normal_editing" ? (
               <TranscriptPreview
                 mode={mode === "gene" && normalReference ? "sequence" : mode}
@@ -347,7 +346,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
                 onPositionChange={(nextPosition) => setPosition(String(nextPosition))}
               />
             ) : (
-              <div className="preview-panel exon-principle-preview">
+              <details className="simple-disclosure"><summary>{l("Exon skipping logic")}</summary><div className="preview-panel exon-principle-preview">
                 <div className="preview-header">
                   <span>{l("Exon skipping logic")} <InfoTip align="left">{l("ESE candidates are perfectly complementary. ESEfinder 3.0 scores the five published matrices at their official thresholds; motifs containing A are retained and overlapping hits are merged into candidate regions.")} <a href="https://esefinder.ahc.umn.edu/cgi-bin/tools/ESE3/esefinder.cgi?process=matrices" target="_blank" rel="noreferrer">ESEfinder 3.0 ↗</a></InfoTip></span>
                   <span>x = {arrnaLength || "—"} nt</span>
@@ -358,11 +357,11 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
                   <div><b>x/2 – x</b><span>{l("SA guide + minimum ESE coverage")}</span></div>
                   <div><b>&gt; x</b><span>{l("SA guide + fewest ESE guides")}</span></div>
                 </div>
-              </div>
+              </div></details>
             )}
           </div>
         </div>
       </form>
-    </section>
+    </TaskInputShell>
   );
 }

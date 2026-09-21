@@ -365,6 +365,43 @@ Object.assign(ZH_TEXT, {
   "The target-arRNA alignment could not be resolved.": "无法解析 target–arRNA alignment。",
 });
 
+Object.assign(ZH_TEXT, {
+  "What would you like to do?": "您想进行哪项操作？",
+  "Design an arRNA, or refine one you have already tested.": "设计新的 arRNA，或优化一条已经实验验证的 arRNA。",
+  "LEAPER helps you design and optimize antisense RNAs for programmable RNA editing, including normal editing, exon skipping, and experiment-guided refinement.": "LEAPER 用于设计和优化可编程 RNA editing 的 antisense RNA，包括 normal editing、exon skipping 和 experiment-guided refinement。",
+  "Explore an example": "查看示例",
+  "View design principles": "查看设计原理",
+  "Citation": "引用",
+  "Maintainer": "维护者",
+  "The citation for this Web Server will be added after publication. Until then, cite the LEAPER studies that support the method used in your work.": "本 Web Server 的正式引用将在文章发表后补充。在此之前，请引用您的研究所采用方法对应的 LEAPER 论文。",
+  "Normal editing design": "Normal editing 设计",
+  "Choose a target A and generate the available initial arRNA designs.": "选择靶 A，并生成可用的初始 arRNA 设计。",
+  "Exon skipping design": "Exon skipping 设计",
+  "Define the target exon and generate SA- and ESE-directed arRNAs.": "定义目标 exon，并生成靶向 SA 与 ESE 的 arRNA。",
+  "Design progress": "设计进度",
+  "Input sequence": "输入序列",
+  "Select target A": "选择靶 A",
+  "Design settings": "设计设置",
+  "Run": "生成",
+  "Input reference": "输入参考序列",
+  "Select exon": "选择 exon",
+  "Edit input": "修改输入",
+  "Downstream and dual deletion designs require 75 downstream nt.": "Downstream 与 dual deletion 设计需要 75 nt 下游序列。",
+  "Upstream and dual deletion designs require 75 upstream nt.": "Upstream 与 dual deletion 设计需要 75 nt 上游序列。",
+  "Selected candidate": "当前候选设计",
+  "Final arRNA sequence": "最终 arRNA 序列",
+  "Design details": "设计详情",
+  "Design details and parameters": "设计详情与参数",
+  "Candidate details": "候选设计详情",
+  "SA and ESE candidates": "SA 与 ESE 候选设计",
+  "ESE coverage": "ESE 覆盖范围",
+  "Ranked arRNA designs": "排序后的 arRNA 设计",
+  "Top recommendation": "首选推荐",
+  "Candidate": "候选设计",
+  "Enter sequences": "输入序列",
+  "View results": "查看结果"
+});
+
 export function normalizeLanguage(value: string | null | undefined): Language {
   return value === "zh-CN" ? "zh-CN" : DEFAULT_LANGUAGE;
 }

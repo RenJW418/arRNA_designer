@@ -14,7 +14,10 @@ export function InfoTip({ children, label, align = "right" }: Props) {
 
   return <span
     className={`info-tip info-tip-${align} ${open ? "open" : ""}`}
-    onMouseEnter={() => setOpen(true)}
+    // Opening on mouse-enter alone can make a newly mounted tip appear under a
+    // stationary pointer after page navigation. Requiring pointer movement keeps
+    // tips closed on entry while preserving the intended hover interaction.
+    onMouseMove={() => setOpen(true)}
     onMouseLeave={() => setOpen(false)}
   >
     <button
@@ -23,7 +26,6 @@ export function InfoTip({ children, label, align = "right" }: Props) {
       aria-label={label ?? t("tip.show")}
       aria-expanded={open}
       aria-describedby={open ? id : undefined}
-      onClick={() => setOpen(true)}
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
       onKeyDown={(event) => {

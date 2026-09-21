@@ -49,3 +49,10 @@ test("dynamic design warnings localize without translating scientific terms", ()
     "arRNA 5′ 端需要 6 个配对 nt；当前仅有 4 个",
   );
 });
+
+test("the simplified task layout has complete Chinese navigation copy", () => {
+  assert.equal(localizeText("zh-CN", "What would you like to do?"), "您想进行哪项操作？");
+  assert.equal(localizeText("zh-CN", "Design progress"), "设计进度");
+  assert.equal(localizeText("zh-CN", "Final arRNA sequence"), "最终 arRNA 序列");
+  assert.equal(localizeText("zh-CN", "Citation"), "引用");
+});

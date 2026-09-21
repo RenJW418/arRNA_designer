@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, Check, FlaskConical, RotateCcw } from "lucide-re
 import { CSSProperties, FormEvent, useMemo, useState } from "react";
 import type { EditingSite, InitialArrnaDesign, NormalArrnaVariant } from "../lib/normalEditing";
 import {
-  createTestedDuplex,
+  reviewTestedDuplex,
   type TestedDuplex,
   type TestedDuplexSeed,
 } from "../lib/testedDuplex";
@@ -71,7 +71,7 @@ function PairingPreview({ duplex }: { duplex: TestedDuplex }) {
 
   return <div className="tested-pairing-preview" aria-label={l("Inferred target-arRNA alignment")}>
     {chunks.map(({ start, target, guide }) => {
-      const style = { "--tested-columns": target.length } as CSSProperties;
+      const style = { "--tested-columns": 30 } as CSSProperties;
       return <section className="tested-pairing-row" style={style} key={start}>
         <div className="tested-pairing-coordinates">
           <span>A{start - duplex.targetIndex >= 0 ? "+" : ""}{start - duplex.targetIndex}</span>
@@ -81,7 +81,7 @@ function PairingPreview({ duplex }: { duplex: TestedDuplex }) {
           const coordinate = start + index - duplex.targetIndex;
           return <i className={`${coordinate === 0 ? "target-a" : ""} ${unsupportedCoordinates.has(coordinate) ? "unsupported" : ""}`} key={coordinate}>{base}</i>;
         })}</div>
-        <div className="tested-pairing-marks"><span />{target.split("").map((_, index) => <i key={index}>|</i>)}</div>
+        <div className="tested-pairing-marks"><span />{target.split("").map((base, index) => <i key={index}>{({ A: "U", U: "A", G: "C", C: "G" }[base] === guide[index]) ? "|" : ""}</i>)}</div>
         <div className="tested-strand guide"><span><b>arRNA</b><small>3′→5′</small></span>{guide.split("").map((base, index) => {
           const coordinate = start + index - duplex.targetIndex;
           return <i className={`${coordinate === 0 ? "target-c" : ""} ${base === "-" ? "deletion" : ""} ${unsupportedCoordinates.has(coordinate) ? "unsupported" : ""}`} key={coordinate}>{base}</i>;
@@ -112,12 +112,12 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
     event.preventDefault();
     setError("");
     try {
-      const next = createTestedDuplex({
+      const next = reviewTestedDuplex({
         targetSequence,
         arrnaSequence,
         targetAPosition: Number(targetAPosition),
         environment,
-      });
+      }, seed?.preparedDuplex);
       setDuplex(next);
       setStage("confirm");
     } catch (caught) {
@@ -128,17 +128,15 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
   return <section className="tested-refinement-page">
     <button className="back-button" type="button" onClick={onExit}><ArrowLeft size={16} aria-hidden="true" />{l("Back to overview")}</button>
     <header className="tested-refinement-header">
-      <p className="eyebrow">Module 3 · {l("Experiment-guided bulge refinement")}</p>
       <h1>{l("Optimize a tested arRNA")}</h1>
-      <p>{l("Start from the exact target and arRNA used in your experiment. Record editing efficiencies, then generate or manually explore supported bulge refinements.")}</p>
     </header>
 
-    <ol className="tested-refinement-steps" aria-label={l("Refinement workflow")}>
-      {[l("Enter tested duplex"), l("Confirm alignment"), l("Refine arRNA")].map((label, index) => {
-        const activeIndex = stage === "input" ? 0 : stage === "confirm" ? 1 : 2;
+    {stage !== "optimize" && <ol className="tested-refinement-steps" aria-label={l("Refinement workflow")}>
+      {[l("Enter sequences"), l("Enter experimental results"), l("View results")].map((label, index) => {
+        const activeIndex = stage === "input" ? 0 : 1;
         return <li className={index < activeIndex ? "complete" : index === activeIndex ? "current" : "pending"} aria-current={index === activeIndex ? "step" : undefined} key={label}><span>{index < activeIndex ? <Check size={14} /> : index + 1}</span><strong>{label}</strong></li>;
       })}
-    </ol>
+    </ol>}
 
     {stage === "input" && <form className="tested-duplex-form" onSubmit={reviewAlignment}>
       {seed?.source === "generated" && <div className="tested-prefill-note"><Check size={16} /><div><strong>{l("Generated design loaded")}</strong><span>{l("Confirm that these are the exact sequences used in the experiment before continuing.")}</span></div></div>}
@@ -155,7 +153,7 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
     </form>}
 
     {stage === "confirm" && duplex && <section className="tested-alignment-card">
-      <div className="tested-alignment-heading"><div><p className="eyebrow">{l("Alignment check")}</p><h2>{l("Confirm the tested duplex")}</h2><p>{l("The arRNA is shown antiparallel. Existing structures will be locked when the optimization workspace opens.")}</p></div><button className="button button-secondary" type="button" onClick={() => setStage("input")}><RotateCcw size={15} />{l("Change input")}</button></div>
+      <div className="tested-alignment-heading"><div><h2>{l("Confirm the tested duplex")}</h2><InfoTip>{l("The arRNA is shown antiparallel. Existing structures will be locked when the optimization workspace opens.")}</InfoTip></div><button className="button button-secondary" type="button" onClick={() => setStage("input")}><RotateCcw size={15} />{l("Change input")}</button></div>
       <dl className="tested-alignment-summary">
         <div><dt>{l("Paired target region")}</dt><dd>{duplex.windowStart}–{duplex.windowEnd} · {duplex.targetWindow.length} nt</dd></div>
         <div><dt>{l("Target")}</dt><dd>A{duplex.targetAPosition} · A–C</dd></div>
@@ -164,12 +162,11 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
       </dl>
       {duplex.ambiguous && <div className="tested-alignment-warning" role="note"><strong>{l("Check this alignment carefully.")}</strong><span>{l("More than one alignment received the same score; the displayed alignment is the deterministic first match.")}</span></div>}
       {duplex.unsupportedStructures.length > 0 && <div className="tested-unsupported-note" role="note"><strong>{l("Locked unsupported mismatch")}</strong><span>{l("It is preserved in the starting arRNA and blocks overlapping bulges, but no effect range is calculated for it.")}</span></div>}
-      <PairingPreview duplex={duplex} />
+      <details className="simple-disclosure" open={duplex.ambiguous || duplex.unsupportedStructures.length > 0 || undefined}><summary>{l("Review alignment")}</summary><PairingPreview duplex={duplex} /></details>
       <button className="button button-primary tested-primary-action" type="button" onClick={() => setStage("optimize")}><FlaskConical size={16} />{l("Confirm and enter experimental results")}</button>
     </section>}
 
-    {stage === "optimize" && duplex && workspace && <>
-      <div className="tested-workspace-toolbar"><div><strong>{l("Confirmed tested duplex")}</strong><span>{sourceLabel} · A{duplex.targetAPosition} · {duplex.environment}</span></div><button className="button button-secondary" type="button" onClick={() => setStage("confirm")}>{l("Review alignment")}</button></div>
+    {duplex && workspace && <div className="tested-optimization-stage" hidden={stage !== "optimize"}>
       <BulgeOptimizationWorkspace
         key={`${duplex.targetSequence}-${duplex.arrnaSequence}-${duplex.environment}`}
         design={workspace.design}
@@ -178,7 +175,8 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
         environment={duplex.environment}
         startLocked
         initialBulges={duplex.initialBulges}
+        onReviewSource={() => setStage("confirm")}
       />
-    </>}
+    </div>}
   </section>;
 }

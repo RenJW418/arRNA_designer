@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Copy, Download, Scissors, Search } from "lucide-react";
+import { ArrowRight, Check, Copy, Scissors, Search } from "lucide-react";
 import { CSSProperties, useState } from "react";
 import {
   AdarEnvironment,
@@ -14,6 +14,7 @@ import { createNormalExportBundle, downloadText, serializeCsv, serializeFasta, s
 import type { TestedDuplexSeed } from "../lib/testedDuplex";
 import { createGeneratedTestedDuplex } from "../lib/testedDuplex";
 import { InfoTip } from "./InfoTip";
+import { ExportMenu } from "./ExportMenu";
 import { useLanguage } from "./LanguageProvider";
 
 interface Props {
@@ -304,22 +305,21 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
   );
 
   return (
-    <section className="arrna-result normal-result-page" aria-live="polite">
+    <section className="arrna-result normal-result-page task-result-page" aria-live="polite">
       <div className="arrna-result-header">
         <div>
           <p className="eyebrow preserve-arrna-case">{l("Normal editing result")}</p>
-          <h1>A{design.targetPosition} · {variants.length} arRNA {l(variants.length === 1 ? "version" : "versions")}</h1>
-          <p>{l("Choose an arRNA version, then copy or export its sequence.")}</p>
+          <h1>A{design.targetPosition} · {environment} · {variants.length} {l(variants.length === 1 ? "candidate" : "candidates")}</h1>
         </div>
         <button className="button button-secondary" type="button" onClick={onRevise}>{l("Revise target")}</button>
       </div>
 
-      <dl className="result-key-facts">
+      <details className="simple-disclosure"><summary>{l("Design details")} · A{design.targetPosition} · {environment}</summary><dl className="result-key-facts">
         <div><dt>{l("Target")}</dt><dd>A{design.targetPosition}</dd></div>
         <div><dt>{l("Environment")}</dt><dd>{environment}</dd></div>
         <div><dt>{l("Site class")}</dt><dd>{l(CATEGORY_LABELS[site.category])}</dd></div>
         <div><dt>{l("Pairing context")} <InfoTip>{l("Arm lengths are the paired target nucleotides upstream and downstream of the selected A.")}</InfoTip></dt><dd>{design.targetWindow.length} nt · {design.upstreamLength}/{design.downstreamLength} nt {l("arms")}</dd></div>
-      </dl>
+      </dl></details>
 
       {visibleWarnings.length > 0 && <div className="result-warning-list" role="note">{visibleWarnings.map((warning) => <p key={warning}>{l(warning)}</p>)}</div>}
 
@@ -334,6 +334,7 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
           <span>{variants.length}/4 {l("versions available")}</span>
         </div>
 
+        <aside className="normal-candidate-sidebar" aria-label={l("Available arRNA designs")}>
         <div className="normal-variant-cards simplified">
           {variants.map((variant) => (
             <button
@@ -350,23 +351,21 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
           ))}
         </div>
 
+        {design.downstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Downstream +34 deletion arRNA and Dual-deletion arRNA require 75 downstream nt.")} <InfoTip>{l("This preserves 32 paired nt beyond A+43.")}</InfoTip></div>}
+        {design.upstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Upstream −31 deletion arRNA and Dual-deletion arRNA require 75 upstream nt.")} <InfoTip>{l("This preserves 17 paired nt beyond A−58.")}</InfoTip></div>}
+        </aside>
+
         <div className="selected-variant-explanation">
-          <span>{l("Selected")}</span>
+          <span>{l("Selected candidate")}</span>
           <strong>{l(selectedVariant.label)}</strong>
           <InfoTip>{l(selectedVariant.description)}</InfoTip>
         </div>
 
-        {design.downstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Downstream +34 deletion arRNA and Dual-deletion arRNA require 75 downstream nt.")} <InfoTip>{l("This preserves 32 paired nt beyond A+43.")}</InfoTip></div>}
-        {design.upstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Upstream −31 deletion arRNA and Dual-deletion arRNA require 75 upstream nt.")} <InfoTip>{l("This preserves 17 paired nt beyond A−58.")}</InfoTip></div>}
-
         <div className="arrna-export result-primary-export">
-          <div><span>{l("Selected arRNA")} · 5′→3′</span><code>{selectedVariant.arrnaSequence}</code><small>{selectedVariant.arrnaSequence.length} nt · {l(selectedVariant.shortLabel)} · {l("RNA alphabet")}</small></div>
+          <div><span>{l("Final arRNA sequence")} · 5′→3′</span><code>{selectedVariant.arrnaSequence}</code><small>{selectedVariant.arrnaSequence.length} nt · {l(selectedVariant.shortLabel)} · {l("RNA alphabet")}</small></div>
           <div className="arrna-export-actions">
-            <button className="button button-secondary" type="button" onClick={copySequence}>{copied ? <Check size={16} /> : <Copy size={16} />}{l(copied ? "Copied" : "Copy sequence")}</button>
-            <button className="button button-secondary" type="button" onClick={downloadCsv}><Download size={16} />CSV</button>
-            <button className="button button-secondary" type="button" onClick={downloadJson}><Download size={16} />JSON</button>
-            <InfoTip align="left">{l("JSON includes normalized input, all candidates, the selected design, warnings, provenance and any recorded experimental evidence.")}</InfoTip>
-            <button className="button button-primary" type="button" onClick={downloadFasta}><Download size={16} />FASTA</button>
+            <button className="button button-primary" type="button" onClick={copySequence}>{copied ? <Check size={16} /> : <Copy size={16} />}{l(copied ? "Copied" : "Copy")}</button>
+            <ExportMenu onDownload={(format) => ({ fasta: downloadFasta, csv: downloadCsv, json: downloadJson })[format]()} />
           </div>
         </div>
 
@@ -406,11 +405,6 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
           }),
         })}>{l("Optimize this tested arRNA")}<ArrowRight size={16} /></button>
       </aside>
-
-      <div className="result-detail-intro">
-        <p className="eyebrow">{l("Supporting details")}</p>
-        <h2>{l("Sequence evidence")} <InfoTip>{l("Open these panels only when you need codon context or base-by-base pairing evidence.")}</InfoTip></h2>
-      </div>
 
       <details className="result-disclosure">
         <summary>

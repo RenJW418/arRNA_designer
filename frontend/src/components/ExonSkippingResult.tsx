@@ -1,8 +1,9 @@
-import { Check, Copy, Download } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { CSSProperties, useState } from "react";
 import { ExonSkippingCandidate, ExonSkippingDesign } from "../lib/exonSkipping";
 import { createExonExportBundle, downloadText, serializeCsv, serializeFasta, serializeJson } from "../lib/exports";
 import { InfoTip } from "./InfoTip";
+import { ExportMenu } from "./ExportMenu";
 import { useLanguage } from "./LanguageProvider";
 
 interface Props {
@@ -112,22 +113,21 @@ export function ExonSkippingResult({ design, onRevise }: Props) {
   }
 
   return (
-    <section className="arrna-result exon-result exon-result-page" aria-live="polite">
+    <section className="arrna-result exon-result exon-result-page task-result-page" aria-live="polite">
       <div className="arrna-result-header">
         <div>
           <p className="eyebrow">{l("Exon skipping result")}</p>
-          <h1>{design.candidates.length} arRNA {l(design.candidates.length === 1 ? "candidate" : "candidates")}</h1>
-          <p>{l("Choose a candidate on the pre-mRNA map, then copy or export its sequence.")}</p>
+          <h1>{l("Exon skipping")} · {design.arrna_length} nt · {design.candidates.length} {l(design.candidates.length === 1 ? "candidate" : "candidates")}</h1>
         </div>
         <button className="button button-secondary" type="button" onClick={onRevise}>{l("Revise input")}</button>
       </div>
 
-      <dl className="result-key-facts exon-key-facts">
+      <details className="simple-disclosure"><summary>{l("Design details")} · {design.arrna_length} nt</summary><dl className="result-key-facts exon-key-facts">
         <div><dt>{l("Candidates")}</dt><dd>{design.candidates.length}</dd></div>
         <div><dt>{l("Requested length")}</dt><dd>{design.arrna_length} nt</dd></div>
         <div><dt>{l("Target exon")}</dt><dd>{design.exon_length} nt · {CLASS_LABELS[design.length_class]}</dd></div>
         <div><dt>{l("Design context")} <InfoTip>{l("SA describes the splice acceptor. ESE regions are merged above-threshold enhancer motifs used to place coverage candidates.")}</InfoTip></dt><dd>{l(design.sa_is_canonical ? "Canonical AG" : "Non-canonical SA")} · {design.ese_regions.length} ESE {l(design.ese_regions.length === 1 ? "region" : "regions")}</dd></div>
-      </dl>
+      </dl></details>
 
       {design.warnings.map((warning) => <div className="arrna-length-warning" key={warning}>{l(warning)}</div>)}
 
@@ -140,6 +140,16 @@ export function ExonSkippingResult({ design, onRevise }: Props) {
           <span>{total} nt {l("local context")}</span>
         </div>
 
+      <div className="exon-result-layout">
+        <aside className="exon-candidate-sidebar" aria-label={l("SA and ESE candidates")}>
+          <div className="task-candidate-heading"><strong>{l("Candidates")}</strong><span>{design.candidates.length}</span></div>
+          <div className="task-candidate-list">
+            {design.candidates.map((candidate) => <button className={`task-candidate ${candidate.id === selected?.id ? "selected" : ""}`} type="button" aria-pressed={candidate.id === selected?.id} onClick={() => setSelectedId(candidate.id)} key={candidate.id}>
+              <span>{candidate.label}</span><small>{candidate.kind === "sa" ? "SA A–C mismatch" : l("ESE coverage")} · {candidate.arrna_sequence.length} nt</small>
+            </button>)}
+          </div>
+        </aside>
+        <div className="exon-result-main">
       <div className="exon-design-board">
         <div className="exon-board-heading"><strong>INTRON X−1 · EXON X · INTRON X</strong><span>{total} nt {l("local context")}</span></div>
         <div className="exon-coordinate-track">
@@ -150,15 +160,7 @@ export function ExonSkippingResult({ design, onRevise }: Props) {
           {design.ese_regions.map((region, index) => (
             <span className="ese-region" style={{ left: `${(exonStart + region.start - 1) / total * 100}%`, width: `${(region.end - region.start + 1) / total * 100}%` }} title={`ESE ${index + 1}: exon ${region.start}-${region.end}; peak ${region.peak_score}`} key={`${region.start}-${region.end}`} />
           ))}
-        </div>
-        <div className="candidate-track-list">
-          {design.candidates.map((candidate) => (
-            <button className={`candidate-track ${candidate.id === selected?.id ? "selected" : ""} candidate-${candidate.kind}`} type="button" aria-pressed={candidate.id === selected?.id} onClick={() => setSelectedId(candidate.id)} key={candidate.id}>
-              <span>{candidate.label}</span>
-              <i style={{ left: `${(candidate.global_start - 1) / total * 100}%`, width: `${(candidate.global_end - candidate.global_start + 1) / total * 100}%` }} />
-              <small>{candidate.arrna_sequence.length} nt</small>
-            </button>
-          ))}
+          {selected && <span className={`selected-candidate-coverage candidate-${selected.kind}`} style={{ left: `${(selected.global_start - 1) / total * 100}%`, width: `${(selected.global_end - selected.global_start + 1) / total * 100}%` }} title={`${selected.label}: ${selected.global_start}–${selected.global_end}`} />}
         </div>
         <div className="exon-track-legend"><span><i className="legend-sa" />{l("SA A–C candidate")}</span><span><i className="legend-ese-region" />{l("Merged ESE high-score region")}</span><span><i className="legend-ese-guide" />{l("Perfect-match ESE candidate")}</span></div>
       </div>
@@ -176,43 +178,26 @@ export function ExonSkippingResult({ design, onRevise }: Props) {
               <strong>{selected.arrna_sequence.length} nt</strong>
             </div>
 
-            <dl className="candidate-meta simplified">
+            <details className="simple-disclosure"><summary>{l("Candidate details")}</summary><dl className="candidate-meta simplified">
               <div><dt>{l("Local coordinates")}</dt><dd>{selected.global_start}–{selected.global_end}</dd></div>
               <div><dt>{l("Exon coverage")}</dt><dd>{selected.exon_start}–{selected.exon_end}</dd></div>
               <div><dt>{l("ESE A covered")}</dt><dd>{selected.covered_a_positions.length || "—"}</dd></div>
               <div><dt>{l("Mismatch coordinate")}</dt><dd>{selected.mismatch_arrna_position ?? "—"}</dd></div>
-            </dl>
+            </dl></details>
 
             <div className="arrna-export result-primary-export exon-primary-export">
               <div><span>{l("Selected arRNA")} · 5′→3′ · A/C/G/U</span><code>{selected.arrna_sequence}</code><small>{selected.arrna_sequence.length} nt · {selected.kind === "sa" ? "SA A–C mismatch" : "ESE perfect complement"}</small></div>
               <div className="arrna-export-actions">
-                <button className="button button-secondary" type="button" onClick={() => copy(selected)}>{copied ? <Check size={15} /> : <Copy size={15} />}{l(copied ? "Copied" : "Copy sequence")}</button>
-                <button className="button button-secondary" type="button" onClick={() => download("csv")}><Download size={15} />CSV</button>
-                <button className="button button-secondary" type="button" onClick={() => download("json")}><Download size={15} />JSON</button>
-                <InfoTip align="left">{l("JSON includes normalized input, all candidates, the selected design, warnings, provenance and any recorded experimental evidence.")}</InfoTip>
-                <button className="button button-primary" type="button" onClick={() => download("fasta")}><Download size={15} />FASTA</button>
+                <button className="button button-primary" type="button" onClick={() => copy(selected)}>{copied ? <Check size={15} /> : <Copy size={15} />}{l(copied ? "Copied" : "Copy sequence")}</button>
+                <ExportMenu onDownload={download} />
               </div>
             </div>
-          </div>
-        ) : <div className="arrna-length-warning exon-no-candidate">{l("No arRNA candidate was generated. Revise the input sequence or design length.")}</div>}
-      </section>
-
-      <div className="result-detail-intro">
-        <p className="eyebrow">{l("Supporting details")}</p>
-        <h2>{l("Sequence evidence")} <InfoTip>{l("Open these panels only for nucleotide-level inspection or method documentation.")}</InfoTip></h2>
-      </div>
-
-      {selected && (
-        <details className="result-disclosure">
-          <summary>
-            <span className="disclosure-index">A</span>
-            <span><strong>{l("Full base-by-base pairing")}</strong></span>
-          </summary>
-          <div className="result-disclosure-body pairing-detail-body">
             <CandidatePairingView candidate={selected} design={design} />
           </div>
-        </details>
-      )}
+        ) : <div className="arrna-length-warning exon-no-candidate">{l("No arRNA candidate was generated. Revise the input sequence or design length.")}</div>}
+        </div>
+      </div>
+      </section>
 
       <details className="result-disclosure">
         <summary>
