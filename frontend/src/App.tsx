@@ -1,5 +1,6 @@
 import { ArrowRight, Dna, FlaskConical, Scissors } from "lucide-react";
 import { useEffect, useState } from "react";
+import { decodeState, encodeState, type SharedDesignInput, type SharedState } from "./lib/urlState";
 import { CitationPage } from "./components/CitationPage";
 import { DesignWorkspace, type Application } from "./components/DesignWorkspace";
 import { HelpGuide } from "./components/HelpGuide";
@@ -20,25 +21,63 @@ const API_DOCS_URL = resolveApiDocsUrl(
 export function App() {
   const { t, l } = useLanguage();
   type View = "home" | "design" | "refine" | "help" | "method" | "citation";
-  const [view, setView] = useState<View>("home");
-  const [exampleId, setExampleId] = useState<ExampleId | null>(null);
-  const [designApplication, setDesignApplication] = useState<Application>("normal_editing");
+  // The whole restorable state lives in the URL fragment, which the browser
+  // never sends to the server, so a shared link carries a design without the
+  // sequence reaching an access log.
+  const restored = typeof window === "undefined" ? null : decodeState(window.location.hash);
+  const [view, setView] = useState<View>(restored?.view as View ?? "home");
+  const [exampleId, setExampleId] = useState<ExampleId | null>((restored?.example as ExampleId) ?? null);
+  const [designApplication, setDesignApplication] = useState<Application>(restored?.application ?? "normal_editing");
   const [refinementSeed, setRefinementSeed] = useState<TestedDuplexSeed | null>(null);
-  function navigate(nextView: View) {
-    if (nextView !== view) window.history.pushState({ leaperView: nextView }, "", window.location.href);
+  const [designInput, setDesignInput] = useState<SharedDesignInput | null>(restored?.input ?? null);
+
+  function writeUrl(next: SharedState, push: boolean) {
+    const fragment = encodeState(next);
+    const url = window.location.pathname + window.location.search + fragment;
+    if (push) window.history.pushState(null, "", url);
+    else window.history.replaceState(null, "", url);
+  }
+
+  function navigate(nextView: View, overrides: Partial<SharedState> = {}) {
+    const next: SharedState = {
+      view: nextView,
+      application: overrides.application ?? designApplication,
+      example: overrides.example ?? undefined,
+      input: overrides.input ?? undefined,
+    };
+    if (nextView !== view || overrides.example || overrides.input) writeUrl(next, true);
     setView(nextView);
   }
-  function openDesign(id: ExampleId | null = null, application: Application = "normal_editing") { setExampleId(id); setDesignApplication(application); navigate("design"); }
+
+  function openDesign(id: ExampleId | null = null, application: Application = "normal_editing") {
+    setExampleId(id);
+    setDesignApplication(application);
+    setDesignInput(null);
+    navigate("design", { application, example: id ?? undefined });
+  }
   function openRefinement(seed: TestedDuplexSeed | null = null) { setRefinementSeed(seed); navigate("refine"); }
 
+  // Generating a design replaces the current entry rather than pushing a new
+  // one, so Back still leaves the module instead of stepping through edits.
+  function recordDesignInput(input: SharedDesignInput) {
+    setDesignInput(input);
+    writeUrl({ view: "design", application: designApplication, example: exampleId ?? undefined, input }, false);
+  }
+
   useEffect(() => {
-    window.history.replaceState({ ...(window.history.state ?? {}), leaperView: "home" }, "", window.location.href);
-    const restoreView = (event: PopStateEvent) => {
-      const candidate = event.state?.leaperView;
-      setView((["home", "design", "refine", "help", "method", "citation"] as View[]).includes(candidate) ? candidate : "home");
+    const restore = () => {
+      const state = decodeState(window.location.hash);
+      setView((state?.view as View) ?? "home");
+      setExampleId((state?.example as ExampleId) ?? null);
+      setDesignApplication(state?.application ?? "normal_editing");
+      setDesignInput(state?.input ?? null);
     };
-    window.addEventListener("popstate", restoreView);
-    return () => window.removeEventListener("popstate", restoreView);
+    window.addEventListener("popstate", restore);
+    window.addEventListener("hashchange", restore);
+    return () => {
+      window.removeEventListener("popstate", restore);
+      window.removeEventListener("hashchange", restore);
+    };
   }, []);
 
   return <div className="app-shell simplified-app">
@@ -67,7 +106,7 @@ export function App() {
         <div className="home-secondary-actions"><span>{l("Explore an example")}</span><button type="button" onClick={() => openDesign("normal-demo")}>Normal editing</button><button type="button" onClick={() => openDesign("dmd-exon-51", "exon_skipping")}>DMD exon 51</button></div>
         <button className="back-button home-method-link" type="button" onClick={() => navigate("method")}>{l("View design principles")} <ArrowRight size={16} /></button>
       </section>
-    </> : view === "method" ? <><section className="method-page-intro"><button className="back-button" type="button" onClick={() => navigate("home")}>{t("common.back")}</button><h1>{t("nav.method")}</h1></section><MethodEvolution /></> : view === "citation" ? <CitationPage onBack={() => navigate("home")} /> : view === "help" ? <HelpGuide onBack={() => navigate("home")} onExample={(id) => openDesign(id, id === "dmd-exon-51" ? "exon_skipping" : "normal_editing")} /> : view === "refine" ? <TestedArrnaRefinement seed={refinementSeed} onExit={() => navigate("home")} /> : <DesignWorkspace key={`${exampleId ?? "blank"}-${designApplication}`} initialExample={exampleId ? DESIGN_EXAMPLES[exampleId] : null} initialApplication={designApplication} onExit={() => navigate("home")} onRefine={openRefinement} />}</main>
+    </> : view === "method" ? <><section className="method-page-intro"><button className="back-button" type="button" onClick={() => navigate("home")}>{t("common.back")}</button><h1>{t("nav.method")}</h1></section><MethodEvolution /></> : view === "citation" ? <CitationPage onBack={() => navigate("home")} /> : view === "help" ? <HelpGuide onBack={() => navigate("home")} onExample={(id) => openDesign(id, id === "dmd-exon-51" ? "exon_skipping" : "normal_editing")} /> : view === "refine" ? <TestedArrnaRefinement seed={refinementSeed} onExit={() => navigate("home")} /> : <DesignWorkspace key={`${exampleId ?? "blank"}-${designApplication}`} initialExample={exampleId ? DESIGN_EXAMPLES[exampleId] : null} initialApplication={designApplication} initialInput={designInput} onInputChange={recordDesignInput} onExit={() => navigate("home")} onRefine={openRefinement} />}</main>
     <footer>
       <span>{t("footer.prototype")}</span>
       <span>{t("footer.maintainer")}: Ren Jiwu (任纪武) · <a href="mailto:renjiwu@stu.pku.edu.cn">renjiwu@stu.pku.edu.cn</a></span>

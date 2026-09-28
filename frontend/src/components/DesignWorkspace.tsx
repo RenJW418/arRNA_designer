@@ -9,6 +9,7 @@ import { createExonSkippingDesign, ExonSkippingDesign, NcbiCodingReference, Ncbi
 import { createNormalEditingDesign, normalResultToDesign, normalResultToVariants, NormalEditingResult } from "../lib/api";
 import type { DesignExample } from "../lib/examples";
 import type { TestedDuplexSeed } from "../lib/testedDuplex";
+import type { SharedDesignInput } from "../lib/urlState";
 import { InfoTip } from "./InfoTip";
 import { useLanguage } from "./LanguageProvider";
 import { TaskInputShell, type TaskStep } from "./TaskLayout";
@@ -21,27 +22,31 @@ interface Props {
   onRefine: (seed: TestedDuplexSeed) => void;
   initialExample?: DesignExample | null;
   initialApplication?: Application;
+  /** Restored from a shared link; takes precedence over the example defaults. */
+  initialInput?: SharedDesignInput | null;
+  /** Reports the inputs behind a generated design so they can go in the URL. */
+  onInputChange?: (input: SharedDesignInput) => void;
 }
 
-export function DesignWorkspace({ onExit, onRefine, initialExample, initialApplication = "normal_editing" }: Props) {
+export function DesignWorkspace({ onExit, onRefine, initialExample, initialApplication = "normal_editing", initialInput, onInputChange }: Props) {
   const { l } = useLanguage();
-  const [mode, setMode] = useState<Mode>(initialExample?.mode ?? "sequence");
+  const [mode, setMode] = useState<Mode>(initialInput?.mode ?? initialExample?.mode ?? "sequence");
   const application = initialExample?.application ?? initialApplication;
-  const [sequence, setSequence] = useState(initialExample?.sequence ?? "");
-  const [position, setPosition] = useState(String(initialExample?.position ?? 1));
-  const [gene, setGene] = useState(initialExample?.gene ?? "DMD");
-  const [species, setSpecies] = useState(initialExample?.species ?? "9606");
+  const [sequence, setSequence] = useState(initialInput?.sequence ?? initialExample?.sequence ?? "");
+  const [position, setPosition] = useState(initialInput?.position ?? String(initialExample?.position ?? 1));
+  const [gene, setGene] = useState(initialInput?.gene ?? initialExample?.gene ?? "DMD");
+  const [species, setSpecies] = useState(initialInput?.species ?? initialExample?.species ?? "9606");
   const [submitted, setSubmitted] = useState(false);
-  const [upstreamIntron, setUpstreamIntron] = useState("");
-  const [targetExon, setTargetExon] = useState("");
-  const [downstreamIntron, setDownstreamIntron] = useState("");
-  const [exonNumber, setExonNumber] = useState(String(initialExample?.exonNumber ?? 51));
-  const [arrnaLength, setArrnaLength] = useState(String(initialExample?.arrnaLength ?? 151));
+  const [upstreamIntron, setUpstreamIntron] = useState(initialInput?.upstreamIntron ?? "");
+  const [targetExon, setTargetExon] = useState(initialInput?.targetExon ?? "");
+  const [downstreamIntron, setDownstreamIntron] = useState(initialInput?.downstreamIntron ?? "");
+  const [exonNumber, setExonNumber] = useState(initialInput?.exonNumber ?? String(initialExample?.exonNumber ?? 51));
+  const [arrnaLength, setArrnaLength] = useState(initialInput?.arrnaLength ?? String(initialExample?.arrnaLength ?? 151));
   const [exonDesign, setExonDesign] = useState<ExonSkippingDesign | null>(null);
   const [reference, setReference] = useState<NcbiExonReference | null>(null);
   const [normalReference, setNormalReference] = useState<NcbiCodingReference | null>(null);
   const [normalResult, setNormalResult] = useState<NormalEditingResult | null>(null);
-  const [adarEnvironment, setAdarEnvironment] = useState<AdarEnvironment>("ADAR1");
+  const [adarEnvironment, setAdarEnvironment] = useState<AdarEnvironment>(initialInput?.adar === "ADAR2" ? "ADAR2" : "ADAR1");
   const [requestError, setRequestError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -62,9 +67,18 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
   const exonSequences = [upstreamIntron, targetExon, downstreamIntron].map(normalize);
   const invalidExonSequence = exonSequences.some((value) => value.length > 0 && /[^ACGT]/.test(value));
 
+  function currentInput(): SharedDesignInput {
+    return {
+      mode, adar: adarEnvironment, sequence, position, gene, species,
+      upstreamIntron, targetExon, downstreamIntron, exonNumber, arrnaLength,
+    };
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setRequestError("");
+    // A design is only worth linking to once the user has asked to generate it.
+    onInputChange?.(currentInput());
     if (application === "normal_editing") {
       if (mode === "gene" && !normalReference) {
         setLoading(true);
