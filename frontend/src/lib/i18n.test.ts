@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   DEFAULT_LANGUAGE,
@@ -55,4 +57,29 @@ test("the simplified task layout has complete Chinese navigation copy", () => {
   assert.equal(localizeText("zh-CN", "Design progress"), "设计进度");
   assert.equal(localizeText("zh-CN", "Final arRNA sequence"), "最终 arRNA 序列");
   assert.equal(localizeText("zh-CN", "Citation"), "引用");
+});
+
+test("every string the interface passes through l() has a Chinese entry", () => {
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) return walk(full);
+    return /\.tsx?$/.test(entry) && !entry.includes(".test.") && entry !== "i18n.ts" ? [full] : [];
+  });
+
+  const literals = new Set<string>();
+  for (const file of walk(join(import.meta.dirname, ".."))) {
+    for (const match of readFileSync(file, "utf8").matchAll(/\bl\(\s*"((?:[^"\\]|\\.)+)"/g)) {
+      literals.add(match[1]);
+    }
+  }
+
+  // Presence of an entry is what matters, not whether the text differs: house
+  // style deliberately keeps scientific terms in English, so several entries
+  // are identical in both languages. A missing entry falls back silently and
+  // leaves the interface half-translated instead of visibly broken.
+  const dictionary = readFileSync(join(import.meta.dirname, "i18n.ts"), "utf8");
+  const keys = new Set([...dictionary.matchAll(/^\s*"((?:[^"\\]|\\.)+)":\s*"/gm)].map((m) => m[1]));
+  const missing = [...literals].filter((text) => !keys.has(text));
+
+  assert.deepEqual(missing, []);
 });
