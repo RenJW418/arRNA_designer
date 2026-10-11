@@ -20,6 +20,9 @@ export interface ExonSkippingCandidate {
   mismatch_arrna_position: number | null;
   covered_a_positions: number[];
   covered_region_indices: number[];
+  partially_covered_region_indices?: number[];
+  covered_hit_indices?: number[];
+  mismatch_exon_positions?: number[];
 }
 
 export interface ExonSkippingDesign {
@@ -46,6 +49,32 @@ export interface ExonSkippingDesign {
   transcript: string | null;
   exon_number: number | null;
   provenance: import("./api").DesignProvenance;
+  reference?: ExonReferenceSnapshot | null;
+  design_settings?: { evaluate_covered_ese: boolean; ese_mismatch_positions: number[] };
+  prediction_settings?: {
+    method: string;
+    matrices: { name: string; threshold: number }[];
+    motif_filter: string;
+    region_merging: string;
+    coordinate_system: string;
+  };
+}
+
+export interface ExonReferenceSnapshot {
+  transcript: string;
+  species?: string;
+  gene?: string;
+  genomic_accession?: string;
+  orientation?: "plus" | "minus";
+  exon_genomic_start?: number;
+  exon_genomic_end?: number;
+  exon_number?: number;
+  selection?: string;
+}
+
+export interface ExonDesignOptions {
+  evaluateCoveredEse?: boolean;
+  eseMismatchPositions?: number[];
 }
 
 export interface NcbiExonReference {
@@ -53,11 +82,13 @@ export interface NcbiExonReference {
   gene: string;
   transcript: string;
   transcript_name: string;
-  selection: "MANE Select" | "longest protein-coding";
+  selection: "MANE Select" | "longest protein-coding" | "user-selected transcript";
   exon_number: number;
   exon_count: number;
   genomic_accession: string;
   orientation: "plus" | "minus";
+  exon_genomic_start?: number;
+  exon_genomic_end?: number;
   upstream_intron: string;
   exon: string;
   downstream_intron: string;
@@ -76,9 +107,10 @@ export interface NcbiCodingReference {
 
 import { apiPost } from "./api";
 
-export function resolveNcbiExon(species: string, gene: string, exonNumber: number, flankLength: number) {
+export function resolveNcbiExon(species: string, gene: string, exonNumber: number, flankLength: number, transcriptAccession?: string) {
   return apiPost<NcbiExonReference>("/references/ncbi/exon", {
     species, gene, exon_number: exonNumber, flank_length: flankLength,
+    transcript_accession: transcriptAccession || undefined,
   });
 }
 
@@ -92,6 +124,7 @@ export function createExonSkippingDesign(
   downstreamIntron: string,
   arrnaLength: number,
   reference?: NcbiExonReference,
+  options: ExonDesignOptions = {},
 ) {
   return apiPost<ExonSkippingDesign>("/exon-skipping/design", {
     upstream_intron: upstreamIntron,
@@ -100,5 +133,13 @@ export function createExonSkippingDesign(
     arrna_length: arrnaLength,
     transcript: reference?.transcript,
     exon_number: reference?.exon_number,
+    reference: reference ? {
+      transcript: reference.transcript, species: reference.species, gene: reference.gene,
+      genomic_accession: reference.genomic_accession, orientation: reference.orientation,
+      exon_genomic_start: reference.exon_genomic_start, exon_genomic_end: reference.exon_genomic_end,
+      exon_number: reference.exon_number, selection: reference.selection,
+    } : undefined,
+    evaluate_covered_ese: options.evaluateCoveredEse ?? false,
+    ese_mismatch_positions: options.eseMismatchPositions ?? [],
   });
 }

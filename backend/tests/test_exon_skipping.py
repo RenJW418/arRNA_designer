@@ -64,4 +64,4 @@ def test_exon_skipping_result_has_normalized_input_and_provenance():
     assert result.normalized_input.coordinate_system == "concatenated_sequence_1_based"
     assert result.provenance.engine.name == "leaper-arrna-engine"
     assert result.provenance.ruleset.id == "leaper-exon-skipping"
-    assert result.provenance.ruleset.version == "0.1.0"
+    assert result.provenance.ruleset.version == "0.2.0"

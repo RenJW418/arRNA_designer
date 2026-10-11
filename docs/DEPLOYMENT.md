@@ -1,5 +1,7 @@
 # 部署、域名与运行手册
 
+> 下文的 Cloudflare/Cloud Run、任务队列和临时数据生命周期是早期规划，不能视为当前部署或已实现的保留政策。当前生产 Compose 使用 HTTP/8008；可选、未部署的 HTTPS/443 方案与明确的待确认项见 [NAR_HTTPS_OPTIONAL.md](NAR_HTTPS_OPTIONAL.md)。默认生产文件未因此更改。
+
 ## 1. 环境
 
 ```text

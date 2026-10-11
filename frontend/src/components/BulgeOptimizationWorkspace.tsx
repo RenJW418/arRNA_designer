@@ -21,7 +21,8 @@ import {
   createAutoMismatchSequence,
   createInitialBulges,
   createOptimizationEvidenceState,
-  createZeroInitializedEfficiencies,
+  createUnmeasuredEfficiencies,
+  parseMeasuredEfficiency,
   effectAtCoordinate,
   removeRemovableBulge,
   evaluateQualitativeEffect,
@@ -30,18 +31,25 @@ import {
   type OptimizationGoal,
   validateBulgePlacement,
   validateMismatchSequence,
+  createManualBulge,
+  createProposalAlignedGuide,
+  validateProtocolDuplex,
+  protocolPositionToInterval,
+  intervalToProtocolPosition,
 } from "../lib/bulgeOptimization";
 import {
   recommendBulgeDesigns,
+  createOptimizedArrnaSequence,
   type BulgeRecommendation,
 } from "../lib/bulgeRecommendation";
-import { getGuidedProgress } from "../lib/guidedOptimization";
+import { getGuidedProgress, createRecommendedProposal } from "../lib/guidedOptimization";
 import { AdarEnvironment, EditingSite, InitialArrnaDesign, NormalArrnaVariant } from "../lib/normalEditing";
 import { BulgeEffectRangeDetails } from "./BulgeEffectRangeDetails";
 import { BulgeStructureOverview } from "./BulgeStructureOverview";
 import { BulgeRecommendationResults } from "./BulgeRecommendationResults";
 import { InfoTip } from "./InfoTip";
 import { useLanguage } from "./LanguageProvider";
+import { RefinementMeasurements } from "./RefinementMeasurements";
 import { ManualBulgeGuideDialog } from "./ManualBulgeGuideDialog";
 import { downloadText } from "../lib/exports";
 
@@ -84,7 +92,7 @@ function candidateById(
   candidates: Record<BulgeType, BulgeCandidate[]>,
 ): BulgeCandidate | null {
   if (!candidateId) return null;
-  return [...candidates.deletion, ...candidates.mismatch]
+  return [...candidates.deletion, ...candidates.mismatch, ...candidates.insertion]
     .find((candidate) => candidate.id === candidateId) ?? null;
 }
 
@@ -123,7 +131,7 @@ function CandidateGroup({
   if (!candidate) return null;
   return <div className="bulge-candidate-group">
     <div>
-      <strong>{l(type === "deletion" ? "Deletion bulges" : "Mismatch bulges")} <InfoTip>{l(type === "deletion" ? "A deletion bulge removes aligned bases from the arRNA." : "A mismatch bulge uses consecutive same-base mismatches: A-A, C-C, G-G or T-T (U-U in RNA output).")}</InfoTip></strong>
+      <strong>{l(type === "deletion" ? "Deletion bulges" : type === "insertion" ? "Insertion bulges" : "Mismatch bulges")} <InfoTip>{l(type === "deletion" ? "A deletion bulge removes aligned bases from the arRNA." : type === "insertion" ? "Insert arRNA bases before the selected target coordinate. Effects are unknown." : "Automatic rules cover same-base mismatches. Manual A/G and other non-complementary mismatches have unknown effects.")}</InfoTip></strong>
     </div>
     <div className="bulge-candidate-list">
       <label className="bulge-size-field">
@@ -176,13 +184,14 @@ export function BulgeOptimizationWorkspace({
   const [placementPreview, setPlacementPreview] = useState<PlacementPreview | null>(null);
   const [placementMessage, setPlacementMessage] = useState("");
   const [efficiencies, setEfficiencies] = useState<Record<number, number>>(() => startLocked
-    ? createZeroInitializedEfficiencies(
-      sites.filter(({ position }) => position >= design.windowStart && position <= design.windowEnd).map(({ position }) => position),
-      design.windowStart + design.targetIndex,
-    )
+    ? createUnmeasuredEfficiencies()
     : {});
+  const [invalidEfficiencyDrafts, setInvalidEfficiencyDrafts] = useState<Record<number, string>>({});
+  const hasInvalidEfficiencies = Object.keys(invalidEfficiencyDrafts).length > 0;
   const [confirmedEfficiencyPositions, setConfirmedEfficiencyPositions] = useState<Set<number>>(new Set());
   const [optimizationGoal, setOptimizationGoal] = useState<OptimizationGoal>("improve-target");
+  const [structureEditor, setStructureEditor] = useState<{ id?: string; type: BulgeType; position: string; size: string; bases: string } | null>(null);
+  const [structureError, setStructureError] = useState("");
   const [editingMismatchId, setEditingMismatchId] = useState<string | null>(null);
   const [mismatchDraft, setMismatchDraft] = useState("");
   const [mismatchError, setMismatchError] = useState("");
@@ -233,18 +242,21 @@ export function BulgeOptimizationWorkspace({
   }, [placementPreview]);
   const displayedBulges = previewBulge ? [...bulges, previewBulge] : bulges;
   const displayedBulgeLabels = new Map(displayedBulges.map((bulge, index) => [bulge.id, `B${index + 1}`]));
+  const pairingBulges = advancedOpen ? displayedBulges : cloneStartingBulges();
 
+  const proposalGuide = useMemo(() => createProposalAlignedGuide(design.targetWindow, design.targetIndex), [design.targetWindow, design.targetIndex]);
+  const protocolReport = validateProtocolDuplex(design.targetWindow, proposalGuide, design.targetIndex, bulges, environment);
   const guideBases = useMemo(() => windowSites.map(({ relativeCoordinate }, index) => {
-    const userBulge = bulges.find((bulge) => bulge.source === "user"
+    const userBulge = bulges.find((bulge) => bulge.type !== "insertion"
       && relativeCoordinate >= bulge.start && relativeCoordinate <= bulge.end);
     if (userBulge?.type === "deletion") return "−";
     if (userBulge?.type === "mismatch") {
       return userBulge.mismatchBases?.[relativeCoordinate - userBulge.start] ?? "?";
     }
-    return activeVariant.alignedGuide[index]?.replace("-", "−") ?? "−";
-  }), [activeVariant, bulges, windowSites]);
+    return proposalGuide[index] ?? "−";
+  }), [proposalGuide, bulges, windowSites]);
 
-  const optimizedSequence = guideBases.filter((base) => base !== "−").reverse().join("");
+  const optimizedSequence = createOptimizedArrnaSequence(proposalGuide, design.targetWindow, design.targetIndex, bulges);
   const sequenceRows = useMemo(() => chunkSequenceForDisplay(
     windowSites.map((entry, index) => ({ ...entry, index })),
     30,
@@ -258,6 +270,8 @@ export function BulgeOptimizationWorkspace({
       optimizedSequence,
       confirmedEfficiencyPositions,
       optimizationGoal,
+      { arrna_sequence: activeVariant.arrnaSequence, aligned_guide: activeVariant.alignedGuide, structures: cloneStartingBulges().map((b) => ({ ...b })) },
+      windowSites.filter(({ site }) => Boolean(site)).map(({ absolutePosition }) => absolutePosition),
     ));
   }, [bulges, confirmedEfficiencyPositions, efficiencies, onEvidenceChange, optimizationGoal, optimizedSequence, sourceVariant?.id]);
 
@@ -271,10 +285,8 @@ export function BulgeOptimizationWorkspace({
   function lockSource(nextVariant: NormalArrnaVariant) {
     setSourceVariant({ ...nextVariant, deletionCoordinates: [...nextVariant.deletionCoordinates] });
     setBulges(cloneStartingBulges());
-    setEfficiencies(createZeroInitializedEfficiencies(
-      windowSites.filter(({ site }) => Boolean(site)).map(({ absolutePosition }) => absolutePosition),
-      design.windowStart + design.targetIndex,
-    ));
+    setEfficiencies(createUnmeasuredEfficiencies());
+    setInvalidEfficiencyDrafts({});
     setConfirmedEfficiencyPositions(new Set());
     setOptimizationGoal("improve-target");
     setSelectedCandidateId(null);
@@ -295,7 +307,10 @@ export function BulgeOptimizationWorkspace({
       setPlacementPreview({ candidate, start, valid: false, reason: l("The bulge extends beyond this arRNA.") });
       return;
     }
-    const validation = validateBulgePlacement(bulges, { start, size: candidate.size });
+    const validation = validateBulgePlacement(bulges, { start, size: candidate.size, type: candidate.type });
+    const preview = new Bulge({ id: "preview", type: candidate.type, start, size: candidate.size, source: "user", effectZones: candidate.effectZones });
+    const report = validateProtocolDuplex(design.targetWindow, proposalGuide, design.targetIndex, [...bulges, preview], environment);
+    if (validation.valid && !report.valid) { validation.valid = false; validation.reason = report.errors.join(" "); }
     setPlacementPreview({
       candidate,
       start,
@@ -307,12 +322,17 @@ export function BulgeOptimizationWorkspace({
   }
 
   function placeCandidate(candidate: BulgeCandidate, start: number) {
+    if (candidate.type === "insertion") {
+      setStructureEditor({ type: "insertion", position: String(start), size: String(candidate.size), bases: "" });
+      setStructureError("");
+      return;
+    }
     const startIndex = start + design.targetIndex;
     if (startIndex < 0 || startIndex + candidate.size > design.targetWindow.length) {
       setPlacementMessage(l("The bulge extends beyond this arRNA."));
       return;
     }
-    const validation = validateBulgePlacement(bulges, { start, size: candidate.size });
+    const validation = validateBulgePlacement(bulges, { start, size: candidate.size, type: candidate.type });
     if (!validation.valid) {
       setPlacementMessage(validation.reason ? l(validation.reason) : l("This bulge cannot be placed here."));
       return;
@@ -328,7 +348,11 @@ export function BulgeOptimizationWorkspace({
       effectZones: candidate.effectZones,
       mismatchBases: candidate.type === "mismatch" ? createAutoMismatchSequence(targetSegment) : undefined,
     });
+    const report = validateProtocolDuplex(design.targetWindow, proposalGuide, design.targetIndex, [...bulges, next], environment);
+    if (!report.valid) { setPlacementMessage(report.errors.join(" ")); return; }
     setBulges((current) => [...current, next]);
+    setRecommendations([]);
+    setHasDesigned(false);
     setFocusedBulgeId(next.id);
     const warning = decreasesTarget(candidate, start) ? ` ${l(TARGET_DECREASE_WARNING)}` : "";
     setPlacementMessage(`${candidate.label} added at ${formatCoordinate(start)}–${formatCoordinate(next.end)}.${warning}`);
@@ -343,9 +367,9 @@ export function BulgeOptimizationWorkspace({
   }
 
   function removeBulge(id: string) {
-    // Structures carried in from the tested arRNA are fixed: they describe what
-    // was actually assayed, so they can be neither removed nor resized. The UI
-    // only offers the control for user-added bulges; this enforces it.
+    // Only the proposal changes; the tested guide and its measurements remain the baseline.
+    setRecommendations([]);
+    setHasDesigned(false);
     setBulges((current) => removeRemovableBulge(current, id));
     setFocusedBulgeId((current) => current === id ? null : current);
     setAppliedRecommendationId(null);
@@ -373,23 +397,56 @@ export function BulgeOptimizationWorkspace({
       setMismatchError(error);
       return;
     }
-    setBulges((current) => current.map((bulge) => bulge.id === activeBulge.id
-      ? bulge.withMismatchBases(normalized)
-      : bulge));
+    const updated = bulges.map((bulge) => bulge.id === activeBulge.id
+      ? createManualBulge({ id: bulge.id, type: "mismatch", start: bulge.start, size: bulge.size, bases: normalized }, design.targetWindow, design.targetIndex, environment)
+      : bulge);
+    const report = validateProtocolDuplex(design.targetWindow, proposalGuide, design.targetIndex, updated, environment);
+    if (!report.valid) { setMismatchError(report.errors.join(" ")); return; }
+    setBulges(updated);
+    setRecommendations([]);
+    setHasDesigned(false);
     setMismatchDraft(normalized);
     setMismatchError("");
     setAppliedRecommendationId(null);
+  }
+
+  function saveStructureEdit() {
+    if (!structureEditor) return;
+    try {
+      const interval = protocolPositionToInterval(Number(structureEditor.position), Number(structureEditor.size), structureEditor.type);
+      const next = createManualBulge({ id: structureEditor.id ?? `manual-${Date.now()}`, type: structureEditor.type, start: interval.start, size: Number(structureEditor.size), bases: structureEditor.bases }, design.targetWindow, design.targetIndex, environment);
+      const others = bulges.filter((b) => b.id !== structureEditor.id);
+      const legal = validateBulgePlacement(others, next);
+      if (!legal.valid) throw new Error(legal.reason);
+      const report = validateProtocolDuplex(design.targetWindow, proposalGuide, design.targetIndex, [...others, next], environment);
+      if (!report.valid) throw new Error(report.errors.join(" "));
+      setBulges([...others, next]);
+      setRecommendations([]);
+      setHasDesigned(false);
+      setAppliedRecommendationId(null);
+      setPlacementMessage(report.warnings.join(" ") || "Proposed structure updated. Test this arRNA experimentally.");
+      setStructureEditor(null);
+      setStructureError("");
+    } catch (error) { setStructureError(error instanceof Error ? error.message : String(error)); }
   }
 
   function setEfficiency(absolutePosition: number, value: string) {
     setRecommendations([]);
     setAppliedRecommendationId(null);
     setHasDesigned(false);
-    if (value === "") {
+    let numeric: number | undefined;
+    let invalid = false;
+    try { numeric = parseMeasuredEfficiency(value); } catch { invalid = true; }
+    setInvalidEfficiencyDrafts((current) => {
+      const next = { ...current };
+      if (invalid) next[absolutePosition] = value;
+      else delete next[absolutePosition];
+      return next;
+    });
+    if (invalid || numeric === undefined) {
       setEfficiencies((current) => {
         const next = { ...current };
-        if (absolutePosition === targetAbsolutePosition) delete next[absolutePosition];
-        else next[absolutePosition] = 0;
+        delete next[absolutePosition];
         return next;
       });
       setConfirmedEfficiencyPositions((current) => {
@@ -399,8 +456,6 @@ export function BulgeOptimizationWorkspace({
       });
       return;
     }
-    const numeric = Math.min(100, Math.max(0, Number(value)));
-    if (!Number.isFinite(numeric)) return;
     if (absolutePosition === targetAbsolutePosition) setDesignGateAttempted(false);
     setEfficiencies((current) => ({ ...current, [absolutePosition]: numeric }));
     setConfirmedEfficiencyPositions((current) => new Set(current).add(absolutePosition));
@@ -417,18 +472,23 @@ export function BulgeOptimizationWorkspace({
     if (!sourceVariant || targetEfficiency === undefined) return;
     setHasDesigned(true);
     setMeasurementsOpen(false);
-    const initialBulges = cloneStartingBulges();
-    const observedSites = windowSites.flatMap(({ site, absolutePosition, relativeCoordinate }) => site ? [{
+    if (hasInvalidEfficiencies) return;
+    if (!protocolReport.valid) { setPlacementMessage(protocolReport.errors.join(" ")); return; }
+    const initialBulges = bulges.map((b) => new Bulge({ ...b }));
+    const observedSites = windowSites.flatMap(({ site, absolutePosition, relativeCoordinate }) => site && confirmedEfficiencyPositions.has(absolutePosition) && efficiencies[absolutePosition] !== undefined ? [{
       coordinate: relativeCoordinate,
       absolutePosition,
-      observedEfficiency: efficiencies[absolutePosition] ?? 0,
+      observedEfficiency: efficiencies[absolutePosition],
+      measurementStatus: "measured" as const,
     }] : []);
     const results = recommendBulgeDesigns({
-      candidates: [...candidates.deletion, ...candidates.mismatch],
+      candidates: [...candidates.deletion, ...candidates.mismatch, ...candidates.insertion],
       initialBulges,
       targetWindow: design.targetWindow,
       targetIndex: design.targetIndex,
       sites: observedSites,
+      environment,
+      alignedGuide: proposalGuide,
       optimizationGoal,
       maxResults: 10,
     });
@@ -439,10 +499,22 @@ export function BulgeOptimizationWorkspace({
       : l("No legal bulge combination matches the current qualitative rules."));
   }
 
+  function focusEfficiency(position: number) {
+    window.requestAnimationFrame(() => {
+      const element = document.getElementById(position === targetAbsolutePosition ? "target-a0-efficiency" : `measurement-site-${position}`);
+      if (element instanceof HTMLButtonElement) element.click();
+      else element?.focus();
+    });
+  }
+
   function attemptOptimizedDesign() {
+    if (hasInvalidEfficiencies) {
+      focusEfficiency(Number(Object.keys(invalidEfficiencyDrafts)[0]));
+      return;
+    }
     if (targetEfficiency === undefined) {
       setDesignGateAttempted(true);
-      window.requestAnimationFrame(() => document.getElementById("target-a0-efficiency")?.focus());
+      focusEfficiency(targetAbsolutePosition);
       return;
     }
     setDesignGateAttempted(false);
@@ -451,15 +523,11 @@ export function BulgeOptimizationWorkspace({
 
   function applyRecommendation(recommendation: BulgeRecommendation) {
     if (!sourceVariant) return;
-    const initialBulges = cloneStartingBulges();
-    const addedBulges = recommendation.addedBulges.map((bulge, index) => new Bulge({
-      ...bulge,
-      id: `applied-${index + 1}-${bulge.type}-${bulge.size}-${bulge.start}`,
-    }));
-    setBulges([...initialBulges, ...addedBulges]);
+    const proposed = createRecommendedProposal(recommendation);
+    setBulges(proposed);
     setAppliedRecommendationId(recommendation.id);
     setAdvancedOpen(true);
-    setFocusedBulgeId(addedBulges[0]?.id ?? initialBulges[0]?.id ?? null);
+    setFocusedBulgeId(recommendation.addedBulges[0]?.id ?? proposed[0]?.id ?? null);
     setSelectedCandidateId(null);
     setPlacementPreview(null);
     setEditingMismatchId(null);
@@ -482,7 +550,7 @@ export function BulgeOptimizationWorkspace({
     </div>}
 
     {!startLocked && <div className="bulge-source-bar">
-      <div><span>{l("Experimental starting point")}</span><strong>{l(sourceVariant?.label ?? variant.label)} <InfoTip>{l(sourceVariant ? "All observations and added bulges in this session belong to this locked arRNA." : "Select the exact generated arRNA used in the experiment, then lock it before entering observations.")}</InfoTip></strong></div>
+      <div><span>{l("Experimental starting point")}</span><strong>{l(sourceVariant?.label ?? variant.label)} <InfoTip>{l(sourceVariant ? "Measurements belong to the tested baseline; proposed structures define the next arRNA." : "Select the exact generated arRNA used in the experiment, then lock it before entering observations.")}</InfoTip></strong></div>
       {!sourceVariant
         ? <button className="button button-primary" type="button" onClick={() => lockSource(variant)}><LockKeyhole size={15} />{l("Use this tested arRNA")}</button>
         : lockedToDifferentVariant
@@ -520,6 +588,7 @@ export function BulgeOptimizationWorkspace({
           <div className="bulge-panel-heading"><div><strong>{l("Choose a candidate")} <InfoTip>{l("Drag a candidate onto the arRNA, or select it and click its starting base.")}</InfoTip></strong></div></div>
           <button className="bulge-range-guide-button" type="button" onClick={() => setManualGuideOpen(true)}>{l("Compare all bulge effect ranges")}</button>
           <CandidateGroup type="deletion" candidates={candidates.deletion} disabled={remainingBulges <= 0} selectedId={selectedCandidateId} expandedRangeId={effectRangeCandidateId} onSelect={selectCandidate} onViewRange={(candidate) => setEffectRangeCandidateId((current) => current === candidate.id ? null : candidate.id)} onDragStart={onCandidateDragStart} />
+          <CandidateGroup type="insertion" candidates={candidates.insertion} disabled={remainingBulges <= 0} selectedId={selectedCandidateId} expandedRangeId={effectRangeCandidateId} onSelect={selectCandidate} onViewRange={(candidate) => setEffectRangeCandidateId((current) => current === candidate.id ? null : candidate.id)} onDragStart={onCandidateDragStart} />
           <CandidateGroup type="mismatch" candidates={candidates.mismatch} disabled={remainingBulges <= 0} selectedId={selectedCandidateId} expandedRangeId={effectRangeCandidateId} onSelect={selectCandidate} onViewRange={(candidate) => setEffectRangeCandidateId((current) => current === candidate.id ? null : candidate.id)} onDragStart={onCandidateDragStart} />
           {effectRangeCandidate && <BulgeEffectRangeDetails candidate={effectRangeCandidate} environment={environment} onClose={() => setEffectRangeCandidateId(null)} />}
           <p className="bulge-provisional-note"><strong>{environment} · {l("core strong-effect zones")}</strong><InfoTip>{l("Expected arrows are shown only where the experimental smoothed fold-change is at least 1.2 or at most 0.8.")}</InfoTip></p>
@@ -527,12 +596,38 @@ export function BulgeOptimizationWorkspace({
 
         <div className="bulge-editor">
           {!advancedOpen && hasDesigned && <div className="measurement-summary"><strong>A0 · {targetEfficiency}% {l("Observed")}</strong><button className="back-button" type="button" aria-expanded={measurementsOpen} onClick={() => setMeasurementsOpen(!measurementsOpen)}>{l(measurementsOpen ? "Hide measurements" : "Edit measurements")}</button></div>}
+          {hasInvalidEfficiencies && <p className="bulge-design-gate-message" role="alert">{l("Editing efficiency must be between 0 and 100%. Correct or clear invalid values before designing or exporting.")}</p>}
           <div hidden={!advancedOpen && hasDesigned && !measurementsOpen}>
-          <div className="bulge-panel-heading"><div><strong>{l(advancedOpen ? "Place and measure" : "Enter experimental editing efficiencies")} <InfoTip>{l("The complete sequence is shown in 30 nt rows. Enter observed editing efficiency directly beneath each A.")}</InfoTip></strong></div></div>
-          <div className="bulge-input-requirements">
-            <span className="required"><b>A0</b>{l("Required")}</span>
-            <span><b>{l("Other A sites")}</b>{l("Optional · defaults to 0")}</span>
-          </div>
+          {!advancedOpen && <RefinementMeasurements
+            targetPosition={targetAbsolutePosition}
+            windowStart={design.windowStart}
+            targetSequence={design.targetWindow}
+            efficiencies={efficiencies}
+            invalidDrafts={invalidEfficiencyDrafts}
+            onChange={setEfficiency}
+          />}
+          {advancedOpen && <div className="bulge-panel-heading"><div><strong>{l("Place and measure")} <InfoTip>{l("The complete sequence is shown in 30 nt rows. Enter observed editing efficiency directly beneath each A.")}</InfoTip></strong></div></div>}
+          {!advancedOpen && <section className="bulge-auto-design" aria-label={l("Optimization goal")}>
+            <fieldset className="bulge-optimization-goal">
+              <legend>{l("Optimization goal")}</legend>
+              <label>
+                <input type="radio" name="bulge-optimization-goal" checked={optimizationGoal === "improve-target"} onChange={() => changeOptimizationGoal("improve-target")} />
+                <span><b>{l("Improve A0")}</b><small>{l("Prefer A0 increase and reduce bystanders")}</small></span>
+              </label>
+              <label>
+                <input type="radio" name="bulge-optimization-goal" checked={optimizationGoal === "preserve-target"} onChange={() => changeOptimizationGoal("preserve-target")} />
+                <span><b>{l("Preserve A0")}</b><small>{l("Do not reward further A0 increase; reduce bystanders")}</small></span>
+              </label>
+            </fieldset>
+            <div className="bulge-design-action">
+              <button className={`button button-primary ${targetEfficiency === undefined || hasInvalidEfficiencies ? "is-gated" : ""}`} type="button" aria-disabled={targetEfficiency === undefined || hasInvalidEfficiencies} onClick={attemptOptimizedDesign}>
+                <ListChecks size={16} aria-hidden="true" />
+                {l("Design optimized arRNAs")}
+              </button>
+              {designGateAttempted && targetEfficiency === undefined && <p className="bulge-design-gate-message" role="alert">{l("Enter the observed editing efficiency for A0 to enable design.")}</p>}
+            </div>
+          </section>}
+
           {advancedOpen && <div className="evidence-separation-note">
             <strong>{l("Evidence")}</strong>
             <span><i className="observed" />{l("Observed")}</span>
@@ -546,6 +641,8 @@ export function BulgeOptimizationWorkspace({
             focusedBulgeId={advancedOpen ? focusedBulgeId : null}
             onClearFocus={() => setFocusedBulgeId(null)}
           />}
+          <details className="refinement-full-pairing" key={advancedOpen ? "manual-pairing" : "tested-pairing"} open={advancedOpen || undefined}>
+            <summary>{l("Full base-by-base pairing")}</summary>
           <div className="bulge-sequence-board" onDragLeave={(event) => {
             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPlacementPreview(null);
           }}>
@@ -561,9 +658,9 @@ export function BulgeOptimizationWorkspace({
                 <div className="bulge-sequence-row bulge-target-row" style={rowStyle}>
                   <span><b>Target RNA</b><small>5′→3′</small></span>
                   {row.map(({ base, relativeCoordinate, absolutePosition, site }) => {
-                    const effect = site ? evaluateQualitativeEffect(relativeCoordinate, displayedBulges) : null;
+                    const effect = advancedOpen && site ? evaluateQualitativeEffect(relativeCoordinate, displayedBulges) : null;
                     const efficiency = efficiencies[absolutePosition];
-                    const occupied = displayedBulges.some((bulge) => relativeCoordinate >= bulge.start && relativeCoordinate <= bulge.end);
+                    const occupied = advancedOpen && displayedBulges.some((bulge) => relativeCoordinate >= bulge.start && relativeCoordinate <= bulge.end);
                     const preview = placementPreview && relativeCoordinate >= placementPreview.start
                       && relativeCoordinate < placementPreview.start + placementPreview.candidate.size;
                     const classes = [
@@ -575,12 +672,13 @@ export function BulgeOptimizationWorkspace({
                       occupied ? "is-bulge-interval" : "",
                       preview ? (placementPreview.valid ? "placement-valid" : "placement-invalid") : "",
                     ].filter(Boolean).join(" ");
-                    const baseStyle = efficiency === undefined ? undefined : { "--measured-efficiency": `${efficiency}%` } as CSSProperties;
+                    const measured = confirmedEfficiencyPositions.has(absolutePosition);
+                    const baseStyle = !measured || efficiency === undefined ? undefined : { "--measured-efficiency": `${efficiency}%` } as CSSProperties;
                     const effectDescription = effect?.status && effect.status !== "none"
                       ? `; ${effect.effects.map(({ bulgeId, effect: direction }) => `${displayedBulgeLabels.get(bulgeId)} ${direction}`).join(", ")}`
                       : "";
-                    return <span className={classes} style={baseStyle} title={site ? `A${absolutePosition}${efficiency === undefined ? ": not measured" : `: ${efficiency}%`}${effectDescription}` : undefined} key={absolutePosition}>
-                      {efficiency !== undefined && <i className="efficiency-fill" />}
+                    return <span className={classes} style={baseStyle} title={site ? `A${absolutePosition}${!measured ? ": not measured (excluded from scoring)" : `: ${efficiency}%`}${effectDescription}` : undefined} key={absolutePosition}>
+                      {measured && efficiency !== undefined && <i className="efficiency-fill" />}
                       <b>{base}</b>
                       {effect && effect.effects.length > 0 && <span className="effect-source-badges">
                         {effect.effects.map(({ bulgeId, effect: direction }) => <i className={direction} aria-label={`${displayedBulgeLabels.get(bulgeId)} core predicted ${direction}`} key={bulgeId}>{displayedBulgeLabels.get(bulgeId)}{direction === "increase" ? "↑" : "↓"}</i>)}
@@ -588,23 +686,23 @@ export function BulgeOptimizationWorkspace({
                     </span>;
                   })}
                 </div>
-                <div className="bulge-efficiency-row" style={rowStyle}>
+                {advancedOpen && <div className="bulge-efficiency-row" style={rowStyle}>
                   <span><b>{l("Observed")}</b><small>{l("editing %")}</small></span>
                   {row.map(({ absolutePosition, site }) => {
                     const isTarget = absolutePosition === targetAbsolutePosition;
                     return site
                       ? <label className={`inline-efficiency-field ${isTarget ? "required" : "optional"}`} title={`${isTarget ? "Required target" : "Optional bystander"} A${absolutePosition} editing efficiency`} key={absolutePosition}>
-                        <input id={isTarget ? "target-a0-efficiency" : undefined} aria-label={`${isTarget ? "Required target" : "Optional bystander"} A${absolutePosition} editing efficiency (%)`} type="number" min="0" max="100" step="0.1" required={isTarget} value={efficiencies[absolutePosition] ?? ""} onChange={(event) => setEfficiency(absolutePosition, event.target.value)} placeholder={isTarget ? l("Required") : "0"} />
+                        <input id={isTarget ? "target-a0-efficiency" : undefined} aria-label={`${isTarget ? "Required target" : "Optional bystander"} A${absolutePosition} editing efficiency (%)`} type="number" min="0" max="100" step="0.1" required={isTarget} aria-invalid={invalidEfficiencyDrafts[absolutePosition] !== undefined || undefined} value={invalidEfficiencyDrafts[absolutePosition] ?? efficiencies[absolutePosition] ?? ""} onChange={(event) => setEfficiency(absolutePosition, event.target.value)} placeholder={l(isTarget ? "Required" : "Unknown")} />
                       </label>
                       : <span className="inline-efficiency-empty" aria-hidden="true" key={absolutePosition} />;
                   })}
-                </div>
+                </div>}
                 {advancedOpen && <div className="bulge-pair-row" style={rowStyle}><span>{l("Pairing")}</span>{row.map(({ base, index, relativeCoordinate }) => <i key={relativeCoordinate}>{({ A: "U", U: "A", T: "A", C: "G", G: "C" }[base] === guideBases[index]) ? "|" : ""}</i>)}</div>}
                 <div className="bulge-sequence-row bulge-guide-row" style={rowStyle}>
                   <span><b>arRNA</b><small>3′→5′</small></span>
                   {row.map(({ relativeCoordinate, absolutePosition, index }) => {
-                    const occupyingBulge = displayedBulges.find((bulge) => relativeCoordinate >= bulge.start && relativeCoordinate <= bulge.end);
-                    const preview = placementPreview && relativeCoordinate >= placementPreview.start
+                    const occupyingBulge = pairingBulges.find((bulge) => relativeCoordinate >= bulge.start && relativeCoordinate <= bulge.end);
+                    const preview = advancedOpen && placementPreview && relativeCoordinate >= placementPreview.start
                       && relativeCoordinate < placementPreview.start + placementPreview.candidate.size;
                     const classes = [
                       "bulge-base",
@@ -615,12 +713,14 @@ export function BulgeOptimizationWorkspace({
                     return <button
                       type="button"
                       className={classes}
-                      disabled={!selectedCandidateId}
+                      disabled={!advancedOpen || !selectedCandidateId}
                       onClick={() => {
+                        if (!advancedOpen) return;
                         const candidate = candidateById(selectedCandidateId, candidates);
                         if (candidate) placeCandidate(candidate, relativeCoordinate);
                       }}
                       onDragOver={(event) => {
+                        if (!advancedOpen) return;
                         const candidate = candidateById(event.dataTransfer.getData("application/x-leaper-bulge") || selectedCandidateId, candidates);
                         if (!candidate) return;
                         event.preventDefault();
@@ -628,50 +728,26 @@ export function BulgeOptimizationWorkspace({
                         previewPlacement(candidate, relativeCoordinate);
                       }}
                       onDrop={(event) => {
+                        if (!advancedOpen) return;
                         event.preventDefault();
                         const candidate = candidateById(event.dataTransfer.getData("application/x-leaper-bulge") || selectedCandidateId, candidates);
                         if (candidate) placeCandidate(candidate, relativeCoordinate);
                       }}
-                      aria-label={`Place selected bulge starting at ${formatCoordinate(relativeCoordinate)}`}
+                      aria-label={advancedOpen ? `Place selected bulge starting at ${formatCoordinate(relativeCoordinate)}` : `Tested arRNA at ${formatCoordinate(relativeCoordinate)}`}
                       key={absolutePosition}
-                    ><b>{guideBases[index]}</b></button>;
+                    ><b>{advancedOpen ? guideBases[index] : activeVariant.alignedGuide[index]}</b></button>;
                   })}
                 </div>
               </section>;
             })}
           </div>
+          </details>
           {advancedOpen && <div className="bulge-sequence-status" aria-live="polite">
             <span>{placementPreview?.reason ?? (placementMessage || `${remainingBulges} additional bulge${remainingBulges === 1 ? "" : "s"} available.`)}</span>
             <span><i className="effect-key increase" />Core increase <i className="effect-key decrease" />Core decrease <i className="effect-key concordant" />Concordant overlap <i className="effect-key conflicting" />Conflicting overlap</span>
           </div>}
 
-          {!advancedOpen && <section className="bulge-auto-design" aria-labelledby="bulge-auto-design-title">
-            <div>
-              <span>{l("Next step")}</span>
-              <strong id="bulge-auto-design-title">{l("Generate optimized arRNAs")}</strong>
-              <small>{targetEfficiency === undefined
-                ? l("Enter the observed editing efficiency for A0 to enable design.")
-                : l("The first result is the recommended design; up to 10 alternatives remain available for comparison.")}</small>
-            </div>
-            <fieldset className="bulge-optimization-goal">
-              <legend>{l("Optimization goal")}</legend>
-              <label>
-                <input type="radio" name="bulge-optimization-goal" checked={optimizationGoal === "improve-target"} onChange={() => changeOptimizationGoal("improve-target")} />
-                <span><b>{l("Improve A0")}</b><small>{l("Prefer A0 increase and reduce bystanders")}</small></span>
-              </label>
-              <label>
-                <input type="radio" name="bulge-optimization-goal" checked={optimizationGoal === "preserve-target"} onChange={() => changeOptimizationGoal("preserve-target")} />
-                <span><b>{l("Preserve A0")}</b><small>{l("Do not reward further A0 increase; reduce bystanders")}</small></span>
-              </label>
-            </fieldset>
-            <div className="bulge-design-action">
-              <button className={`button button-primary ${targetEfficiency === undefined ? "is-gated" : ""}`} type="button" aria-disabled={targetEfficiency === undefined} onClick={attemptOptimizedDesign}>
-                <ListChecks size={16} aria-hidden="true" />
-                {l("Design optimized arRNAs")}
-              </button>
-              {designGateAttempted && targetEfficiency === undefined && <p className="bulge-design-gate-message" role="alert">{l("Enter the observed editing efficiency for A0 to enable design.")}</p>}
-            </div>
-          </section>}
+
 
           </div>
 
@@ -684,7 +760,7 @@ export function BulgeOptimizationWorkspace({
 
           {!advancedOpen && <BulgeRecommendationResults
             recommendations={recommendations}
-            alignedGuide={sourceVariant.alignedGuide}
+            alignedGuide={proposalGuide}
             targetWindow={design.targetWindow}
             targetIndex={design.targetIndex}
             appliedRecommendationId={appliedRecommendationId}
@@ -704,27 +780,43 @@ export function BulgeOptimizationWorkspace({
       </div>
 
       {advancedOpen && <section className="bulge-stack-panel bulge-stack-panel-full">
+          <p>{l("The tested arRNA and experimental percentages are retained as the baseline. Edits here create a proposed next design. Four structures and ranking weights are software heuristics.")}</p>
+          <button type="button" className="button button-secondary" onClick={() => { setStructureEditor({ type: "deletion", position: "4", size: "1", bases: "" }); setStructureError(""); }}>{l("Add manual structure")}</button>
+          {structureEditor && <div className="mismatch-editor">
+            <label>{l("Type")} <select value={structureEditor.type} onChange={(e) => setStructureEditor({ ...structureEditor, type: e.target.value as BulgeType })}><option value="deletion">{l("n/0 deletion")}</option><option value="insertion">{l("0/n insertion")}</option><option value="mismatch">{l("n/n mismatch (including A/G)")}</option></select></label>
+            <label>{l(structureEditor.type === "insertion" ? "Target boundary (insert before this base)" : "Bulge position (edge nearest A0)")}<input type="number" value={structureEditor.position} onChange={(e) => setStructureEditor({ ...structureEditor, position: e.target.value })} /></label>
+            {structureEditor.type !== "insertion" && <p>{l("A negative position extends upstream: −31 with size 28 occupies target interval −58…−31.")}</p>}
+            <label>{l("Size (nt)")}<input type="number" min="1" value={structureEditor.size} onChange={(e) => setStructureEditor({ ...structureEditor, size: e.target.value })} /></label>
+            {structureEditor.type !== "deletion" && <label>{l("arRNA bases in aligned 3′→5′ order")}<input value={structureEditor.bases} onChange={(e) => setStructureEditor({ ...structureEditor, bases: e.target.value })} /></label>}
+            <button type="button" className="button button-primary" onClick={saveStructureEdit}>{l("Apply proposed structure")}</button><button type="button" onClick={() => setStructureEditor(null)}>{l("Cancel")}</button>
+            {structureError && <p role="alert">{l(structureError)}</p>}
+          </div>}
+          {protocolReport.errors.map((message) => <p role="alert" key={message}>{l(message)}</p>)}
+          {protocolReport.warnings.map((message) => <p key={message}>{l(message)}</p>)}
           <div className="bulge-panel-heading"><div><strong>{l("Current bulge stack")} · {bulges.length}/{MAX_BULGES} <InfoTip>{l("A design may contain up to 4 bulges, including starting structures. Occupied arRNA intervals cannot overlap.")}</InfoTip></strong></div></div>
           <div className="bulge-stack-list">
             {bulges.length === 0 && <p className="bulge-panel-empty">{l("This starting arRNA has no deletion bulges.")}</p>}
             {bulges.map((bulge) => <article className={`${bulge.source === "initial" ? "initial" : "user"} ${focusedBulgeId === bulge.id ? "focused" : ""}`} key={bulge.id}>
               <span>{bulge.source === "initial" ? <LockKeyhole size={13} /> : <GripVertical size={13} />}</span>
-              <div><strong>{bulge.type === "deletion" ? "Deletion" : "Mismatch"} · {bulge.size} nt</strong><small>{formatCoordinate(bulge.start)}–{formatCoordinate(bulge.end)} · {bulge.effectSupport === "unsupported" ? l("locked · unsupported effect") : l(bulge.source === "initial" ? "starting arRNA" : "added optimization")}</small></div>
+              <div><strong>{bulge.type === "deletion" ? "Deletion" : bulge.type === "insertion" ? "Insertion" : "Mismatch"} · {bulge.size} nt</strong><small>{l(bulge.type === "insertion" ? "Insertion boundary" : "NP position")} {formatCoordinate(intervalToProtocolPosition(bulge))} · {bulge.type !== "insertion" && <>{l("Target interval")} {formatCoordinate(bulge.start)}–{formatCoordinate(bulge.end)} · </>}{bulge.effectSupport === "unsupported" ? l("unknown effect · experimental testing required") : l(bulge.source === "initial" ? "starting arRNA" : "added optimization")}</small></div>
               <button type="button" className="bulge-text-button" aria-pressed={focusedBulgeId === bulge.id} onClick={() => setFocusedBulgeId((current) => current === bulge.id ? null : bulge.id)}>{l(focusedBulgeId === bulge.id ? "Hide effect range" : "View effect range")}</button>
-              {bulge.type === "mismatch" && bulge.source === "user" && <button type="button" className="bulge-text-button" onClick={() => beginMismatchEdit(bulge)}>{l("Edit bases")}</button>}
-              {bulge.source === "user" && <button type="button" className="bulge-icon-button" aria-label={`Remove ${bulge.type} at ${formatCoordinate(bulge.start)}`} onClick={() => removeBulge(bulge.id)}><Trash2 size={14} /></button>}
+              {bulge.type === "mismatch" && <button type="button" className="bulge-text-button" onClick={() => beginMismatchEdit(bulge)}>{l("Edit bases")}</button>}
+              <button type="button" className="bulge-text-button" onClick={() => { setStructureEditor({ id: bulge.id, type: bulge.type, position: String(intervalToProtocolPosition(bulge)), size: String(bulge.size), bases: bulge.insertionBases ?? bulge.mismatchBases ?? "" }); setStructureError(""); }}>{l("Edit structure")}</button>
+              {<button type="button" className="bulge-icon-button" aria-label={`Remove ${bulge.type} at ${formatCoordinate(bulge.start)}`} onClick={() => removeBulge(bulge.id)}><Trash2 size={14} /></button>}
             </article>)}
           </div>
           {editingMismatchId && (() => {
             const activeBulge = bulges.find((bulge) => bulge.id === editingMismatchId);
             if (!activeBulge) return null;
-            return <div className="mismatch-editor"><label htmlFor="mismatch-bases">{l("Aligned mismatch bases")} · arRNA 3′→5′ <InfoTip>{activeBulge.size} {l("positions must remain same-base mismatches with the target.")}</InfoTip></label><div><input id="mismatch-bases" value={mismatchDraft} maxLength={activeBulge.size} onChange={(event) => setMismatchDraft(event.target.value.toUpperCase())} /><button className="button button-secondary" type="button" onClick={saveMismatchEdit}>{l("Apply")}</button></div>{mismatchError && <p role="alert">{l(mismatchError)}</p>}</div>;
+            return <div className="mismatch-editor"><label htmlFor="mismatch-bases">{l("Aligned mismatch bases")} · arRNA 3′→5′ <InfoTip>{activeBulge.size} {l("Each aligned base must be non-complementary. Effects outside same-base rules are unknown.")}</InfoTip></label><div><input id="mismatch-bases" value={mismatchDraft} maxLength={activeBulge.size} onChange={(event) => setMismatchDraft(event.target.value.toUpperCase())} /><button className="button button-secondary" type="button" onClick={saveMismatchEdit}>{l("Apply")}</button></div>{mismatchError && <p role="alert">{l(mismatchError)}</p>}</div>;
           })()}
       </section>}
 
+      {advancedOpen && bulges.filter((b) => b.type === "insertion").map((b) => <p key={`${b.id}-inserted`}>{l("Insertion boundary")} {formatCoordinate(b.start)}: {b.insertionBases} (arRNA 3′→5′) · {l("unknown effect · experimental testing required")}</p>)}
       {advancedOpen && <div className="optimized-arrna-output"><span>{l("Current optimized arRNA")} · 5′→3′</span><code>{optimizedSequence}</code><small>{optimizedSequence.length} nt</small><div className="manual-export-actions">
-        <button className="button button-primary" type="button" onClick={async () => { await navigator.clipboard.writeText(optimizedSequence); setCopied(true); }}>{copied ? null : <Copy size={15} />}{l(copied ? "Copied" : "Copy sequence")}</button>
-        <button className="button button-secondary" type="button" onClick={() => downloadText("LEAPER_manual_arRNA.fasta", `>LEAPER_manual_arRNA_5to3\n${optimizedSequence}\n`, "text/plain;charset=utf-8")}><Download size={15} />FASTA</button>
+        <button className="button button-primary" type="button" disabled={!protocolReport.valid || hasInvalidEfficiencies} onClick={async () => { await navigator.clipboard.writeText(optimizedSequence); setCopied(true); }}>{copied ? null : <Copy size={15} />}{l(copied ? "Copied" : "Copy sequence")}</button>
+        <button className="button button-secondary" type="button" disabled={!protocolReport.valid || hasInvalidEfficiencies} onClick={() => downloadText("LEAPER_manual_arRNA.fasta", `>LEAPER_manual_arRNA_5to3\n${optimizedSequence}\n`, "text/plain;charset=utf-8")}><Download size={15} />FASTA</button>
+        <button className="button button-secondary" type="button" disabled={!protocolReport.valid || hasInvalidEfficiencies} onClick={() => downloadText("LEAPER_manual_refinement.json", JSON.stringify({ target_window: design.targetWindow, target_index: design.targetIndex, adar_environment: environment, evidence: createOptimizationEvidenceState(sourceVariant?.id, efficiencies, bulges, optimizedSequence, confirmedEfficiencyPositions, optimizationGoal, { arrna_sequence: activeVariant.arrnaSequence, aligned_guide: activeVariant.alignedGuide, structures: cloneStartingBulges().map((b) => ({ ...b })) }, windowSites.filter(({ site }) => Boolean(site)).map(({ absolutePosition }) => absolutePosition)), protocol_checks: protocolReport }, null, 2), "application/json;charset=utf-8")}>{l("JSON with tested baseline")}</button>
       </div></div>}
       <ManualBulgeGuideDialog
         open={manualGuideOpen}

@@ -1,10 +1,53 @@
 # Project Context and Handoff Memory
 
-Last updated: 2026-08-27
+Current entry points updated: 2026-10-06. Historical snapshot below: 2026-08-27.
 
 This file is the durable project memory for contributors and future coding-agent sessions. It
 records product intent, decisions, current implementation state, and known gaps. It contains no
 credentials or private biological sequences.
+
+## Current authority and implementation (2026-10-06)
+
+This section supersedes implementation and rule-status statements in the historical
+snapshot below. The user's explicit instruction is: **一切以 NatureProtocol 为准**.
+Scientific authority is the author-provided fixed final manuscript at
+`../NatureProtocol/final/20180_1_art_file_302613_tm8fj0.pdf`; journal acceptance and
+publication status are unverified. Do not modify the fixed final or invent its DOI.
+
+- Read `README.md` for the current, two-terminal development workflow: backend
+  8010, frontend 5173. Default development Compose starts only backend 8000;
+  `docker-compose.prod.yml` starts the complete HTTP/8008 stack.
+- Read `docs/NATURE_PROTOCOL_ALIGNMENT.md` for the actual normal/exon design rules,
+  target-axis coordinates, full motif coverage and the conservative 10-nt external
+  complementary flanks adopted for the protocol's internal 5/10-nt ambiguity.
+  The old 115-nt illustration and provisional-rule descriptions below do not
+  describe current default normal designs (151/141/123/113 nt).
+- Normal and exon construction are backend-authoritative. Experimental-feedback
+  refinement is browser-side qualitative search; unknown measurements remain
+  unknown and a measured zero is distinct. Predictions and candidate ranking
+  require appropriate biological evidence before efficacy/generalization claims.
+- `docs/NAR_WEBSITE_READINESS.md` records current Help/API/downloads/browser checks
+  and actual missing operator facts. The four synchronous POST services are
+  normal/exon designs and NCBI CDS/exon lookup. Legacy generic validation/task
+  routes return 501; no production queue/database has been implemented.
+- No accounts, analytics, user-sequence database or public results gallery exist
+  in application code. Sequences are transmitted in design requests, NCBI receives
+  lookup identifiers, and sharing fragments encode sequences without encryption.
+  Historical 24-hour retention and cloud/database proposals below are intentions,
+  not evidence of implemented deletion or verified production log policy.
+- `docs/NAR_HTTPS_OPTIONAL.md` describes an optional, unstarted HTTPS edge.
+  Domain/TLS and current public deployment are not confirmed by local checks.
+- The review manuscript/artwork package is
+  `../NAR/稿件版本/V12_2026-10-06_NAR投稿完善/`. Its native Illustrator figures are
+  software illustrations with disclosed provenance, not generated experiment data.
+  Author/service/archive facts and predictive biological evidence remain explicit
+  pending inputs. Do not claim acceptance or replace them with guesses.
+
+## Historical discovery snapshot (2026-08-27)
+
+The remaining sections preserve discovery decisions and earlier implementation
+notes for context. Use the current entry points above when changing or describing
+the website; do not silently promote an early proposal into a current claim.
 
 ## Product objective
 

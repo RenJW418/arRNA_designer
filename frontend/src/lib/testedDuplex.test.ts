@@ -50,8 +50,10 @@ describe("tested target-arRNA alignment", () => {
 
   it("retains another mismatch as locked unsupported structure without an effect range", () => {
     const duplex = createTestedDuplex({
-      targetSequence: "GGACUU",
-      arrnaSequence: "AAGCCA",
+      // An internal U/G mismatch has paired flanks; a terminal mismatch can instead
+      // be explained by an unpaired arRNA insertion under semi-global alignment.
+      targetSequence: "GGACUUCG",
+      arrnaSequence: "CGAGGCCC",
       targetAPosition: 3,
       environment: "ADAR1",
     });

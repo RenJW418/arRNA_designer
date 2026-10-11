@@ -2,9 +2,9 @@
 //
 // Everything needed to restore a view is encoded into the URL fragment. A
 // fragment is never transmitted in an HTTP request, so a shared link carries a
-// user's sequence to whoever opens it while the server never sees it and
-// nothing lands in an access log. That keeps the promise that nothing a user
-// submits is retained, and makes it true by construction rather than by policy.
+// user's sequence to whoever opens it without putting the fragment in HTTP
+// request URLs. Generating a design still submits the sequence to the API in
+// its request body; fragment encoding does not establish a retention policy.
 
 export type SharedView = "home" | "design" | "refine" | "help" | "method" | "citation";
 export type SharedMode = "sequence" | "gene";
@@ -22,6 +22,13 @@ export interface SharedDesignInput {
   downstreamIntron?: string;
   exonNumber?: string;
   arrnaLength?: string;
+  windowStart?: string;
+  windowEnd?: string;
+  includeInternalBulge?: boolean;
+  codingContext?: boolean;
+  evaluateCoveredEse?: boolean;
+  eseMismatchPositions?: string;
+  transcriptAccession?: string;
 }
 
 export interface SharedState {

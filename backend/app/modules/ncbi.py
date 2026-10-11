@@ -22,7 +22,8 @@ class NcbiLookupError(RuntimeError):
 
 
 def _get_gene_product(
-    client: httpx.Client, species: str, gene: str, *, require_genomic: bool = False
+    client: httpx.Client, species: str, gene: str, *, require_genomic: bool = False,
+    transcript_accession: str | None = None
 ) -> tuple[dict, dict, str]:
     symbol = quote(gene.strip().upper(), safe="")
     taxon = quote(species.strip(), safe="")
@@ -41,6 +42,11 @@ def _get_gene_product(
     ]
     if not transcripts:
         raise NcbiLookupError("No protein-coding RefSeq transcript with a CDS was found")
+    if transcript_accession:
+        requested = next((t for t in transcripts if t.get("accession_version") == transcript_accession), None)
+        if requested is None:
+            raise NcbiLookupError("The requested versioned transcript was not found for this gene")
+        return product, requested, "user-selected transcript"
     mane = [transcript for transcript in transcripts if transcript.get("select_category") == "MANE_SELECT"]
     transcript = mane[0] if mane else max(transcripts, key=lambda item: int(item.get("length", 0)))
     selection = "MANE Select" if mane else "longest protein-coding"
@@ -77,7 +83,8 @@ def resolve_ncbi_exon(payload: NcbiExonRequest) -> NcbiExonResponse:
     try:
         with httpx.Client(timeout=30, headers={"User-Agent": "LEAPER-arRNA-Designer/0.1"}) as client:
             product, transcript, selection = _get_gene_product(
-                client, payload.species, payload.gene, require_genomic=True
+                client, payload.species, payload.gene, require_genomic=True,
+                transcript_accession=payload.transcript_accession
             )
             locations = transcript["genomic_locations"]
             location = next(
@@ -124,6 +131,7 @@ def resolve_ncbi_exon(payload: NcbiExonRequest) -> NcbiExonResponse:
         transcript=transcript["accession_version"], transcript_name=transcript.get("name", ""),
         selection=selection, exon_number=payload.exon_number, exon_count=len(exons),
         genomic_accession=accession, orientation=orientation,
+        exon_genomic_start=int(current["begin"]), exon_genomic_end=int(current["end"]),
         upstream_intron=upstream, exon=exon, downstream_intron=downstream,
     )
 

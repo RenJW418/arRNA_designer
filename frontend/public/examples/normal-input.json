@@ -1,0 +1,9 @@
+{
+  "sequence": "GACCTCTCCGGGGTCACAGAGGAGGCACCCCTGAAGCTCTCCAAGGCCGTGCATAAGGCTGTGCTGACCATCGACAAGAAAGGGACTGAAGCTGCTGGGGCCATGTTTTTAGAGGCCATACCCATGTCTATCCCCCCCGAGGTCAAGTTCAAC",
+  "target_position": 76,
+  "adar_environment": "ADAR1",
+  "window_start_relative": -75,
+  "window_end_relative": 75,
+  "include_internal_bulge": false,
+  "coding_context": true
+}

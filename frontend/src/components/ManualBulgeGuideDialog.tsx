@@ -20,7 +20,7 @@ export function ManualBulgeGuideDialog({ open, candidates, environment, onClose,
   const [activeType, setActiveType] = useState<BulgeType>("deletion");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const allCandidates = useMemo(() => [...candidates.deletion, ...candidates.mismatch], [candidates]);
+  const allCandidates = useMemo(() => [...candidates.deletion, ...candidates.mismatch, ...candidates.insertion], [candidates]);
   const selectedCandidate = getManualGuideCandidate(allCandidates, activeType, selectedId);
 
   useEffect(() => {
@@ -45,17 +45,17 @@ export function ManualBulgeGuideDialog({ open, candidates, environment, onClose,
   }}>
     <section className="manual-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-guide-title" aria-describedby="manual-guide-description">
       <header>
-        <div><p className="eyebrow">{l("Manual design guide")}</p><h2 id="manual-guide-title">{l("Compare bulge effect ranges")}</h2><p id="manual-guide-description">{l("Choose a bulge type and size. The chart shows the qualitative core effect range relative to the provisional source anchor.")}</p></div>
+        <div><p className="eyebrow">{l("Manual design guide")}</p><h2 id="manual-guide-title">{l("Compare bulge effect ranges")}</h2><p id="manual-guide-description">{l("Choose a bulge type and size. Distances are measured from the bulge edge nearest the evaluated adenosine. Insertion effects are unknown.")}</p></div>
         <button ref={closeButtonRef} className="manual-guide-close" type="button" aria-label={l("Close manual design guide")} onClick={onClose}><X size={18} /></button>
       </header>
 
       <div className="manual-guide-body">
         <div className="manual-guide-controls">
           <div className="manual-guide-type-tabs" role="tablist" aria-label={l("Bulge type")}>
-            {(["deletion", "mismatch"] as BulgeType[]).map((type) => <button type="button" role="tab" aria-selected={activeType === type} key={type} onClick={() => {
+            {(["deletion", "insertion", "mismatch"] as BulgeType[]).map((type) => <button type="button" role="tab" aria-selected={activeType === type} key={type} onClick={() => {
               setActiveType(type);
               setSelectedId(null);
-            }}>{type === "deletion" ? "Deletion" : "Mismatch"}</button>)}
+            }}>{type === "deletion" ? "Deletion" : type === "insertion" ? "Insertion" : "Mismatch"}</button>)}
           </div>
           <div className="manual-guide-sizes" aria-label={l("Bulge size")}>
             <span>{l("Choose size")}</span>
@@ -70,7 +70,7 @@ export function ManualBulgeGuideDialog({ open, candidates, environment, onClose,
 
         <div className="manual-guide-preview">
           <BulgeEffectRangeDetails candidate={selectedCandidate} environment={environment} onClose={onClose} showClose={false} />
-          <p>{l("Pink regions indicate expected increase; blue regions indicate expected decrease. The source coordinate anchor remains provisional for multi-nucleotide bulges.")}</p>
+          <p>{l("Pink and blue show qualitative single-bulge rules, not measured activity. Test each proposed design experimentally.")}</p>
         </div>
       </div>
 

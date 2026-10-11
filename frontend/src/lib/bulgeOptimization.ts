@@ -1,12 +1,12 @@
 import coreEffectZoneData from "../data/bulgeCoreEffectZones.json" with { type: "json" };
 import type { AdarEnvironment } from "./normalEditing.ts";
 
-export type BulgeType = "deletion" | "mismatch";
+export type BulgeType = "deletion" | "mismatch" | "insertion";
 export type BulgeSource = "initial" | "user";
 export type BulgeEffectSupport = "supported" | "unsupported";
 export type QualitativeDirection = "increase" | "decrease";
 export type OptimizationGoal = "improve-target" | "preserve-target";
-export type EffectAnchor = "start" | "upstream-edge" | "downstream-edge";
+export type EffectAnchor = "nearest-edge" | "start" | "upstream-edge" | "downstream-edge";
 
 export interface RelativeEffectZone {
   anchor: EffectAnchor;
@@ -24,6 +24,7 @@ export interface BulgeDefinition {
   effectZones: RelativeEffectZone[];
   candidateId?: string;
   mismatchBases?: string;
+  insertionBases?: string;
   effectSupport?: BulgeEffectSupport;
 }
 
@@ -34,6 +35,7 @@ export interface BulgeCandidate {
   label: string;
   effectZones: RelativeEffectZone[];
   provisional?: boolean;
+  effectSupport?: BulgeEffectSupport;
 }
 
 export interface PlacementValidation {
@@ -72,10 +74,22 @@ export interface QualitativePredictionRecord {
 export interface OptimizationEvidenceState {
   source_candidate_id?: string;
   observed_editing_efficiencies: Record<number, number>;
-  observed_editing_status: Record<number, "default_zero" | "measured">;
+  observed_editing_status: Record<number, "default_zero" | "unmeasured" | "measured">;
   optimization_goal: OptimizationGoal;
   qualitative_predictions: QualitativePredictionRecord[];
   optimized_arrna_sequence?: string;
+  tested_baseline?: { arrna_sequence: string; aligned_guide: string; structures: BulgeDefinition[]; editing_efficiencies?: Record<number, number>; editing_status?: Record<number, "default_zero" | "unmeasured" | "measured"> };
+  proposed_structures?: BulgeDefinition[];
+}
+
+/** Empty input is unknown; a measured percentage must be finite and in range. */
+export function parseMeasuredEfficiency(value: string): number | undefined {
+  if (value.trim() === "") return undefined;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
+    throw new RangeError("Editing efficiency must be a finite percentage between 0 and 100.");
+  }
+  return numeric;
 }
 
 export function createOptimizationEvidenceState(
@@ -87,18 +101,22 @@ export function createOptimizationEvidenceState(
     Object.keys(efficiencies).map(Number),
   ),
   optimizationGoal: OptimizationGoal = "improve-target",
+  testedBaseline?: OptimizationEvidenceState["tested_baseline"],
+  adenosinePositions: readonly number[] = Object.keys(efficiencies).map(Number),
 ): OptimizationEvidenceState {
+  for (const value of Object.values(efficiencies)) parseMeasuredEfficiency(String(value));
+  const measuredEntries = Object.entries(efficiencies).filter(([p, value]) =>
+    Number.isFinite(value) && (confirmedPositions.has(Number(p)) || value !== 0));
+  const measured = Object.fromEntries(measuredEntries);
+  const measuredPositions = new Set(measuredEntries.map(([p]) => Number(p)));
+  const status = Object.fromEntries([...new Set([...adenosinePositions, ...Object.keys(efficiencies).map(Number)])]
+    .map((p) => [p, measuredPositions.has(p) ? "measured" as const : "unmeasured" as const]));
   return {
     source_candidate_id: sourceCandidateId,
-    observed_editing_efficiencies: { ...efficiencies },
-    observed_editing_status: Object.fromEntries(
-      Object.entries(efficiencies).map(([position, efficiency]) => [
-        Number(position),
-        confirmedPositions.has(Number(position)) || efficiency !== 0
-          ? "measured"
-          : "default_zero",
-      ]),
-    ),
+    tested_baseline: testedBaseline ? { ...structuredClone(testedBaseline), editing_efficiencies: { ...measured }, editing_status: { ...status } } : undefined,
+    proposed_structures: bulges.map((bulge) => ({ ...bulge, effectZones: bulge.effectZones.map((z) => ({ ...z })) })),
+    observed_editing_efficiencies: measured,
+    observed_editing_status: status,
     optimization_goal: optimizationGoal,
     qualitative_predictions: bulges.filter(({ effectSupport }) => effectSupport !== "unsupported").map((bulge) => ({
       bulge_id: bulge.id,
@@ -139,6 +157,7 @@ export class Bulge {
   readonly effectZones: RelativeEffectZone[];
   readonly candidateId?: string;
   readonly mismatchBases?: string;
+  readonly insertionBases?: string;
   readonly effectSupport: BulgeEffectSupport;
 
   constructor(definition: BulgeDefinition) {
@@ -152,11 +171,13 @@ export class Bulge {
     this.effectZones = definition.effectZones.map((zone) => ({ ...zone }));
     this.candidateId = definition.candidateId;
     this.mismatchBases = definition.mismatchBases;
-    this.effectSupport = definition.effectSupport ?? "supported";
+    this.insertionBases = definition.insertionBases;
+    this.effectSupport = definition.type === "insertion" ? "unsupported" : definition.effectSupport ?? "supported";
+    if (this.effectSupport === "unsupported") this.effectZones = [];
   }
 
   get end(): number {
-    return this.start + this.size - 1;
+    return this.type === "insertion" ? this.start : this.start + this.size - 1;
   }
 
   effectAt(targetCoordinate: number): QualitativeDirection | null {
@@ -164,20 +185,22 @@ export class Bulge {
   }
 
   withMismatchBases(mismatchBases: string): Bulge {
-    return new Bulge({ ...this, mismatchBases });
+    return new Bulge({ ...this, source: "user", mismatchBases, effectSupport: mismatchBases === this.mismatchBases ? this.effectSupport : "unsupported" });
   }
 }
 
 // Shared by Bulge.effectAt and by callers that must read an effect direction
 // before a Bulge instance exists, such as a drag-over placement preview.
 export function effectAtCoordinate(
-  placement: { start: number; size: number; effectZones: RelativeEffectZone[] },
+  placement: { start: number; size: number; effectZones: RelativeEffectZone[]; effectSupport?: BulgeEffectSupport },
   targetCoordinate: number,
 ): QualitativeDirection | null {
+  if (placement.effectSupport === "unsupported") return null;
   const end = placement.start + placement.size - 1;
   for (const zone of placement.effectZones) {
-    const distance = zone.anchor === "start"
-      ? targetCoordinate - placement.start
+    // Legacy start-labelled screening ranges were already proximal-edge distances.
+    const distance = zone.anchor === "start" || zone.anchor === "nearest-edge"
+      ? targetCoordinate - Math.max(placement.start, Math.min(targetCoordinate, end))
       : zone.anchor === "upstream-edge"
         ? placement.start - targetCoordinate
         : targetCoordinate - end;
@@ -199,12 +222,16 @@ export function chunkSequenceForDisplay<T>(items: T[], rowSize: number): T[][] {
 }
 
 export function createBulgeOverviewGeometry(
-  bulge: Pick<Bulge, "start" | "end">,
+  bulge: Pick<Bulge, "start" | "end"> & { type?: BulgeType },
   windowStart: number,
   windowEnd: number,
 ): BulgeOverviewGeometry {
   if (windowEnd < windowStart) throw new Error("Overview window end must not precede its start.");
   const windowLength = windowEnd - windowStart + 1;
+  if (bulge.type === "insertion") {
+    const fraction = Math.max(0, Math.min(1, (bulge.start - windowStart) / windowLength));
+    return { startFraction: fraction, endFraction: fraction, centerFraction: fraction, widthFraction: 0, visibleSize: bulge.start >= windowStart && bulge.start <= windowEnd + 1 ? 1 : 0 };
+  }
   const visibleStart = Math.max(windowStart, Math.min(windowEnd + 1, bulge.start));
   const visibleEnd = Math.max(windowStart - 1, Math.min(windowEnd, bulge.end));
   const visibleSize = Math.max(0, visibleEnd - visibleStart + 1);
@@ -223,8 +250,11 @@ export function createAbsoluteEffectZoneInterval(
   bulge: Pick<Bulge, "start" | "end">,
   zone: RelativeEffectZone,
 ): EffectZoneInterval {
-  const bounds = zone.anchor === "start"
-    ? [bulge.start + zone.minDistance, bulge.start + zone.maxDistance]
+  const bounds = zone.anchor === "start" || zone.anchor === "nearest-edge"
+    ? [
+      (zone.minDistance > 0 ? bulge.end : bulge.start) + zone.minDistance,
+      (zone.maxDistance < 0 ? bulge.start : bulge.end) + zone.maxDistance,
+    ]
     : zone.anchor === "upstream-edge"
       ? [bulge.start - zone.maxDistance, bulge.start - zone.minDistance]
       : [bulge.end + zone.minDistance, bulge.end + zone.maxDistance];
@@ -250,7 +280,7 @@ export function createEffectZoneOverviewGeometry(
 }
 
 interface CoreEffectZoneDataset {
-  zones: Record<AdarEnvironment, Record<BulgeType, Record<string, RelativeEffectZone[]>>>;
+  zones: Record<AdarEnvironment, Partial<Record<BulgeType, Record<string, RelativeEffectZone[]>>>>;
 }
 
 const CORE_EFFECT_ZONE_DATA = coreEffectZoneData as CoreEffectZoneDataset;
@@ -284,6 +314,7 @@ export function getBulgeCandidates(
   return {
     deletion: createCandidates("deletion"),
     mismatch: createCandidates("mismatch"),
+    insertion: Array.from({ length: 30 }, (_, i) => ({ id: `insertion-${i + 1}`, type: "insertion" as const, size: i + 1, label: `${i + 1} nt insertion`, effectZones: [], effectSupport: "unsupported" as const })),
   };
 }
 
@@ -291,34 +322,34 @@ export function getBulgeCandidates(
 // environment. Interactive code should call getBulgeCandidates(environment).
 export const BULGE_CANDIDATES = getBulgeCandidates("ADAR1");
 
+export function createUnmeasuredEfficiencies(): Record<number, number> {
+  return {};
+}
+
+/** Legacy entry point: new sessions now keep all missing measurements absent. */
 export function createZeroInitializedEfficiencies(
-  adenosinePositions: number[],
-  targetPosition: number,
+  _adenosinePositions: number[], _targetPosition: number,
 ): Record<number, number> {
-  return Object.fromEntries(
-    [...new Set(adenosinePositions)]
-      .filter((position) => position !== targetPosition)
-      .map((position) => [position, 0]),
-  );
+  return createUnmeasuredEfficiencies();
 }
 
 export function intervalsOverlap(
   left: Pick<Bulge, "start" | "end">,
-  right: { start: number; size: number },
+  right: { start: number; size: number; type?: BulgeType },
 ): boolean {
-  const rightEnd = right.start + right.size - 1;
+  const rightEnd = right.type === "insertion" ? right.start : right.start + right.size - 1;
   return left.start <= rightEnd && right.start <= left.end;
 }
 
 export function validateBulgePlacement(
   existing: Bulge[],
-  proposed: { start: number; size: number },
+  proposed: { start: number; size: number; type?: BulgeType },
   maximum = MAX_BULGES,
 ): PlacementValidation {
   if (!Number.isInteger(proposed.start) || !Number.isInteger(proposed.size) || proposed.size < 1) {
     return { valid: false, reason: "Bulge position and size must be positive-integer sequence coordinates." };
   }
-  if (proposed.start <= TARGET_COORDINATE && proposed.start + proposed.size - 1 >= TARGET_COORDINATE) {
+  if (proposed.type !== "insertion" && proposed.start <= TARGET_COORDINATE && proposed.start + proposed.size - 1 >= TARGET_COORDINATE) {
     return { valid: false, reason: "A bulge structure cannot cover the target A0. Place it entirely upstream or downstream." };
   }
   if (existing.length >= maximum) {
@@ -331,11 +362,9 @@ export function validateBulgePlacement(
   return { valid: true };
 }
 
-// Structures carried in from the tested arRNA describe what was actually
-// assayed, so they can be neither removed nor resized; only user-added bulges
-// can be taken away again.
+// Proposal changes are separate from the immutable experimentally tested baseline.
 export function removeRemovableBulge(bulges: Bulge[], id: string): Bulge[] {
-  return bulges.filter((bulge) => bulge.id !== id || bulge.source === "initial");
+  return bulges.filter((bulge) => bulge.id !== id);
 }
 
 export function createInitialBulges(
@@ -436,9 +465,79 @@ export function validateMismatchSequence(targetSequence: string, mismatchSequenc
   const mismatch = mismatchSequence.toUpperCase().replace(/T/g, "U");
   if (mismatch.length !== target.length) return `Enter exactly ${target.length} RNA bases.`;
   if (/[^ACGU]/.test(mismatch)) return "Mismatch sequence may contain only A, C, G or U.";
-  const expected = createAutoMismatchSequence(target);
-  const unsupportedIndex = mismatch.split("").findIndex((base, index) => base !== expected[index]);
-  return unsupportedIndex >= 0
-    ? "Mismatch bases must form same-base mismatches with the aligned target bases."
+  const complement: Record<string, string> = { A: "U", C: "G", G: "C", T: "A", U: "A" };
+  return mismatch.split("").some((base, i) => base === complement[target[i]])
+    ? "Each selected mismatch base must be non-complementary to the target."
     : null;
+}
+
+export function validateProtocolDuplex(
+  target: string, alignedGuide: string, targetIndex: number, bulges: Bulge[], environment: AdarEnvironment,
+): { valid: boolean; errors: string[]; warnings: string[] } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const [coreStart, coreEnd] = environment === "ADAR1" ? [-4, 25] : [-6, 11];
+  const windowStart = -targetIndex;
+  const windowEnd = target.length - targetIndex - 1;
+  if (windowStart > coreStart || windowEnd < coreEnd) errors.push(`${environment} requires target coverage ${coreStart}…+${coreEnd}.`);
+  const complement: Record<string, string> = { A: "U", C: "G", G: "C", T: "A", U: "A" };
+  const paired = (coordinate: number, ignoreInsertion?: string) => {
+    const i = coordinate + targetIndex;
+    if (i < 0 || i >= target.length || coordinate === 0) return false;
+    if (bulges.some((b) => b.type === "insertion" ? b.id !== ignoreInsertion && b.start === coordinate : coordinate >= b.start && coordinate <= b.end)) return false;
+    return alignedGuide[i]?.replace(/T/g, "U") === complement[target[i]];
+  };
+  for (const b of bulges) {
+    if (b.start < windowStart || b.end > windowEnd) errors.push("A structure extends beyond the target window.");
+    const external = b.end < coreStart || b.start > coreEnd;
+    if (external) {
+      const left = b.start - 1;
+      const right = b.type === "insertion" ? b.start : b.end + 1;
+      const good = Array.from({ length: 10 }, (_, i) => paired(left - i, b.id) && paired(right + i, b.id)).every(Boolean);
+      if (!good) errors.push(`External ${b.type} at ${b.start} requires at least 10 complementary nucleotides on each side.`);
+    } else {
+      warnings.push(`Internal ${b.type} perturbs the ${environment} productive region; compare target and bystander editing experimentally.`);
+    }
+  }
+  if (bulges.some((b) => b.effectSupport === "unsupported")) warnings.push("Some structural effects are unknown; no rule-based activity is assigned to them.");
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+export function createProposalAlignedGuide(target: string, targetIndex: number): string {
+  const complement: Record<string, string> = { A: "U", C: "G", G: "C", T: "A", U: "A" };
+  return target.toUpperCase().split("").map((base, i) => i === targetIndex ? "C" : complement[base]).join("");
+}
+
+export function createManualBulge(
+  input: { id: string; type: BulgeType; start: number; size: number; bases?: string },
+  target: string, targetIndex: number, environment: AdarEnvironment,
+): Bulge {
+  const bases = input.bases?.toUpperCase().replace(/T/g, "U").replace(/\s/g, "");
+  if (input.type !== "deletion" && (!bases || bases.length !== input.size || /[^ACGU]/.test(bases))) throw new Error(`Enter exactly ${input.size} A, C, G or U bases in aligned arRNA 3′→5′ order.`);
+  const segment = target.slice(input.start + targetIndex, input.start + targetIndex + input.size);
+  if (input.type === "mismatch") {
+    const error = validateMismatchSequence(segment, bases!);
+    if (error) throw new Error(error);
+  }
+  const supported = input.type === "deletion" || (input.type === "mismatch" && bases === createAutoMismatchSequence(segment));
+  return new Bulge({ ...input, source: "user", mismatchBases: input.type === "mismatch" ? bases : undefined,
+    insertionBases: input.type === "insertion" ? bases : undefined,
+    effectSupport: supported && input.size <= 30 ? "supported" : "unsupported",
+    effectZones: supported ? getCoreEffectZones(environment, input.type, input.size) : [],
+  });
+}
+
+/** NP position is the tract edge nearest design A0; insertion uses an explicit target boundary. */
+export function protocolPositionToInterval(position: number, size: number, type: BulgeType = "deletion"): EffectZoneInterval {
+  if (!Number.isInteger(position) || !Number.isInteger(size) || size < 1) throw new Error("Position must be an integer and size a positive integer.");
+  if (type === "insertion") return { start: position, end: position };
+  if (position === 0) throw new Error("A bulge position at A0 (zero) is not allowed.");
+  return position < 0 ? { start: position - size + 1, end: position } : { start: position, end: position + size - 1 };
+}
+
+export function intervalToProtocolPosition(bulge: Pick<Bulge, "start" | "end"> & { type?: BulgeType }): number {
+  if (bulge.type === "insertion") return bulge.start;
+  if (bulge.end < 0) return bulge.end;
+  if (bulge.start > 0) return bulge.start;
+  throw new Error("The structural interval must not cover A0.");
 }

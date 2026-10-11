@@ -20,6 +20,17 @@ export interface NormalEditingRequest {
   target_position: number;
   adar_environment: AdarEnvironment;
   reference?: Omit<NcbiCodingReference, "cds_sequence">;
+  window_start_relative?: number;
+  window_end_relative?: number;
+  include_internal_bulge?: boolean;
+  coding_context?: boolean;
+}
+
+export interface NormalDesignOptions {
+  windowStartRelative?: number;
+  windowEndRelative?: number;
+  includeInternalBulge?: boolean;
+  codingContext?: boolean;
 }
 
 export interface NormalEditingResult {
@@ -30,6 +41,10 @@ export interface NormalEditingResult {
     length: number;
     target_position: number;
     coordinate_system: "sequence_1_based";
+    window_start_relative?: number;
+    window_end_relative?: number;
+    include_internal_bulge?: boolean;
+    coding_context?: boolean;
   };
   reference: Omit<NcbiCodingReference, "cds_sequence"> | null;
   editing_site: {
@@ -107,6 +122,7 @@ export function createNormalEditingRequest(
   targetPosition: number,
   environment: AdarEnvironment,
   reference?: NcbiCodingReference | null,
+  options: NormalDesignOptions = {},
 ): NormalEditingRequest {
   const normalized = sequence.toUpperCase().replace(/U/g, "T").replace(/\s/g, "");
   const referenceSnapshot = reference ? {
@@ -118,7 +134,14 @@ export function createNormalEditingRequest(
     cds_start: reference.cds_start,
     cds_end: reference.cds_end,
   } : undefined;
-  return { sequence: normalized, target_position: targetPosition, adar_environment: environment, reference: referenceSnapshot };
+  return {
+    sequence: normalized, target_position: targetPosition, adar_environment: environment,
+    reference: referenceSnapshot,
+    window_start_relative: options.windowStartRelative ?? -75,
+    window_end_relative: options.windowEndRelative ?? 75,
+    include_internal_bulge: options.includeInternalBulge ?? false,
+    coding_context: options.codingContext ?? true,
+  };
 }
 
 export function createNormalEditingDesign(
@@ -126,8 +149,9 @@ export function createNormalEditingDesign(
   targetPosition: number,
   environment: AdarEnvironment,
   reference?: NcbiCodingReference | null,
+  options: NormalDesignOptions = {},
 ) {
-  return apiPost<NormalEditingResult>("/designs/normal-editing", createNormalEditingRequest(sequence, targetPosition, environment, reference));
+  return apiPost<NormalEditingResult>("/designs/normal-editing", createNormalEditingRequest(sequence, targetPosition, environment, reference, options));
 }
 
 export function normalResultToDesign(result: NormalEditingResult): InitialArrnaDesign {

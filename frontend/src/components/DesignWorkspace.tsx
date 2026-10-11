@@ -42,6 +42,13 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
   const [downstreamIntron, setDownstreamIntron] = useState(initialInput?.downstreamIntron ?? "");
   const [exonNumber, setExonNumber] = useState(initialInput?.exonNumber ?? String(initialExample?.exonNumber ?? 51));
   const [arrnaLength, setArrnaLength] = useState(initialInput?.arrnaLength ?? String(initialExample?.arrnaLength ?? 151));
+  const [windowStart, setWindowStart] = useState(initialInput?.windowStart ?? "-75");
+  const [windowEnd, setWindowEnd] = useState(initialInput?.windowEnd ?? "75");
+  const [includeInternalBulge, setIncludeInternalBulge] = useState(initialInput?.includeInternalBulge ?? false);
+  const [codingContext, setCodingContext] = useState(initialInput?.codingContext ?? true);
+  const [evaluateCoveredEse, setEvaluateCoveredEse] = useState(initialInput?.evaluateCoveredEse ?? false);
+  const [eseMismatchPositions, setEseMismatchPositions] = useState(initialInput?.eseMismatchPositions ?? "");
+  const [transcriptAccession, setTranscriptAccession] = useState(initialInput?.transcriptAccession ?? "");
   const [exonDesign, setExonDesign] = useState<ExonSkippingDesign | null>(null);
   const [reference, setReference] = useState<NcbiExonReference | null>(null);
   const [normalReference, setNormalReference] = useState<NcbiCodingReference | null>(null);
@@ -56,9 +63,10 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
   );
   const invalidSequence = cleanSequence.length > 0 && /[^ACGT]/.test(cleanSequence);
   const inFrame = cleanSequence.length > 0 && cleanSequence.length % 3 === 0;
+  const useCodingContext = mode === "gene" || codingContext;
   const editingSites = useMemo(
-    () => classifyEditingSites(cleanSequence),
-    [cleanSequence],
+    () => classifyEditingSites(cleanSequence, useCodingContext),
+    [cleanSequence, useCodingContext],
   );
   const selectedSite = editingSites.find((site) => site.position === Number(position));
   const invalidTarget = application === "normal_editing" && cleanSequence.length > 0 && !selectedSite;
@@ -71,6 +79,8 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
     return {
       mode, adar: adarEnvironment, sequence, position, gene, species,
       upstreamIntron, targetExon, downstreamIntron, exonNumber, arrnaLength,
+      windowStart, windowEnd, includeInternalBulge, codingContext,
+      evaluateCoveredEse, eseMismatchPositions, transcriptAccession,
     };
   }
 
@@ -92,9 +102,13 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
             ?? sites.find((site) => site.category !== "blocked_ga")
             ?? sites[0];
           if (!defaultSite) throw new Error(l("No adenosine target was found in the selected CDS. Choose another gene or enter a sequence."));
+          const savedSite = initialInput?.mode === "gene" && normalize(initialInput.sequence ?? "") === codingReference.cds_sequence
+            ? sites.find((site) => site.position === Number(initialInput.position)) : undefined;
+          const chosenSite = savedSite ?? defaultSite;
           setNormalReference(codingReference);
           setSequence(codingReference.cds_sequence);
-          setPosition(String(defaultSite.position));
+          setPosition(String(chosenSite.position));
+          onInputChange?.({ ...currentInput(), sequence: codingReference.cds_sequence, position: String(chosenSite.position) });
         } catch (error) {
           setRequestError(error instanceof Error ? l(error.message) : l("The NCBI reference could not be loaded. Check the reference identifiers and try again."));
         } finally {
@@ -102,7 +116,11 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
         }
         return;
       }
-      if (!cleanSequence || invalidSequence || !inFrame || invalidTarget) return;
+      if (!cleanSequence || invalidSequence || (useCodingContext && !inFrame) || invalidTarget) return;
+      if (!Number.isInteger(Number(windowStart)) || !Number.isInteger(Number(windowEnd)) || Number(windowStart) > 0 || Number(windowEnd) < 0) {
+        setRequestError(l("Window coordinates must be integers with start ≤ 0 and end ≥ 0."));
+        return;
+      }
       setLoading(true);
       try {
         const result = await createNormalEditingDesign(
@@ -110,6 +128,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
           Number(position),
           adarEnvironment,
           mode === "gene" ? normalReference : null,
+          { windowStartRelative: Number(windowStart), windowEndRelative: Number(windowEnd), includeInternalBulge, codingContext: useCodingContext },
         );
         setNormalResult(result);
         setSubmitted(true);
@@ -130,7 +149,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
       let activeReference = reference;
       let [upstream, exon, downstream] = exonSequences;
       if (mode === "gene") {
-        activeReference = await resolveNcbiExon(species, gene, Number(exonNumber), length);
+        activeReference = await resolveNcbiExon(species, gene, Number(exonNumber), length, transcriptAccession.trim() || undefined);
         setReference(activeReference);
         upstream = activeReference.upstream_intron;
         exon = activeReference.exon;
@@ -142,7 +161,14 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
         setRequestError(l("Enter A/C/G/T/U sequences for the upstream intron, target exon and downstream intron."));
         return;
       }
-      const design = await createExonSkippingDesign(upstream, exon, downstream, length, activeReference ?? undefined);
+      const mismatchPositions = eseMismatchPositions.trim() ? eseMismatchPositions.trim().split(/[\s,;]+/).map(Number) : [];
+      if (mismatchPositions.some((p) => !Number.isInteger(p) || p < 1)) {
+        setRequestError(l("Enter positive exon coordinates separated by commas for optional A/C mismatches."));
+        return;
+      }
+      const design = await createExonSkippingDesign(upstream, exon, downstream, length, mode === "gene" ? activeReference ?? undefined : undefined, {
+        evaluateCoveredEse, eseMismatchPositions: mismatchPositions,
+      });
       setExonDesign(design);
       setSubmitted(true);
     } catch (error) {
@@ -162,8 +188,10 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
         nextPosition,
         adarEnvironment,
         mode === "gene" ? normalReference : null,
+        { windowStartRelative: Number(windowStart), windowEndRelative: Number(windowEnd), includeInternalBulge, codingContext: useCodingContext },
       );
       setNormalResult(result);
+      onInputChange?.({ ...currentInput(), position: String(nextPosition) });
     } catch (error) {
       setRequestError(error instanceof Error ? l(error.message) : l("The design could not be generated. Check the input and try again."));
       setSubmitted(false);
@@ -173,6 +201,12 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
   }
 
   if (submitted && application === "normal_editing" && normalResult) {
+    if (normalResult.candidates.length === 0) return <section className="result-placeholder" aria-live="polite">
+      <h1>{l("No arRNA candidate was generated.")}</h1>
+      <p>{normalResult.pairing.message}</p>
+      {normalResult.warnings.map((warning) => <p key={warning}>{l(warning)}</p>)}
+      <button className="button button-primary" onClick={() => setSubmitted(false)}>{l("Revise input")}</button>
+    </section>;
     const resultSite = {
       position: normalResult.editing_site.position,
       codon: normalResult.editing_site.codon,
@@ -182,6 +216,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
       category: normalResult.editing_site.category,
     };
     return <InitialArrnaResult
+      key={`${normalResult.normalized_input.target_position}:${normalResult.window_start}:${normalResult.window_end}:${normalResult.normalized_input.include_internal_bulge}`}
       design={normalResultToDesign(normalResult)}
       variants={normalResultToVariants(normalResult)}
       result={normalResult}
@@ -220,7 +255,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
   }
 
   const hasInput = application === "normal_editing"
-    ? mode === "gene" ? Boolean(normalReference) : Boolean(cleanSequence) && !invalidSequence && inFrame
+    ? mode === "gene" ? Boolean(normalReference) : Boolean(cleanSequence) && !invalidSequence && (!useCodingContext || inFrame)
     : mode === "gene" ? Boolean(reference) : exonSequences.every(Boolean) && !invalidExonSequence;
   const hasTarget = application === "normal_editing" ? Boolean(selectedSite) : mode === "gene" ? Number(exonNumber) > 1 : Boolean(targetExon);
   const currentStep = !hasInput ? 0 : !hasTarget ? 1 : 3;
@@ -252,7 +287,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
             <span><strong>{l("Sequence mode")}</strong><small>{l("Paste DNA or RNA directly")}</small></span>
           </label>
           <label className={mode === "gene" ? "mode-option selected" : "mode-option"}>
-            <input type="radio" name="mode" checked={mode === "gene"} onChange={() => setMode("gene")} />
+            <input type="radio" name="mode" checked={mode === "gene"} onChange={() => { setMode("gene"); setNormalReference(null); }} />
             <Search aria-hidden="true" />
             <span><strong>{l("Gene / species")}</strong><small>{l("Resolve a reference transcript")}</small></span>
           </label>
@@ -263,6 +298,7 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
             {mode === "sequence" && application === "normal_editing" ? (
               <>
                 <label htmlFor="sequence">{l("Target sequence")} <span>5′ → 3′</span></label>
+                <label className="protocol-check"><input type="checkbox" checked={codingContext} onChange={(event) => setCodingContext(event.target.checked)} />{l("Annotate coding sequence and amino-acid changes")}</label>
                 <textarea
                   id="sequence"
                   value={sequence}
@@ -270,8 +306,8 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
                   placeholder={l("Paste a DNA or RNA sequence…")}
                   rows={7}
                 />
-                <div className={invalidSequence || (cleanSequence.length > 0 && !inFrame) ? "field-meta error" : "field-meta"}>
-                  <span>{l(invalidSequence ? "Use only A, C, G, T or U" : inFrame ? "In-frame coding sequence" : "CDS length must be divisible by 3")}</span>
+                <div className={invalidSequence || (useCodingContext && cleanSequence.length > 0 && !inFrame) ? "field-meta error" : "field-meta"}>
+                  <span>{l(invalidSequence ? "Use only A, C, G, T or U" : !useCodingContext ? "General target RNA; no reading frame assumed" : inFrame ? "In-frame coding sequence" : "CDS length must be divisible by 3")}</span>
                   <span>{cleanSequence.length.toLocaleString()} nt</span>
                 </div>
                 <label htmlFor="position">{l("Target A position")} <span>{l("1-based sequence coordinate")}</span></label>
@@ -296,6 +332,8 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
                 {application === "exon_skipping" ? <>
                   <label htmlFor="exon-number">{l("Target exon number")}</label>
                   <input id="exon-number" type="number" min="2" value={exonNumber} onChange={(event) => setExonNumber(event.target.value)} />
+                  <label htmlFor="transcript-accession">{l("Transcript accession (optional)")}</label>
+                  <input id="transcript-accession" value={transcriptAccession} onChange={(event) => { setTranscriptAccession(event.target.value); setReference(null); }} placeholder="NM_004006.3" />
                   <div className="reference-notice">
                     {l("Sequence and exon coordinates are retrieved live from")} <a href="https://www.ncbi.nlm.nih.gov/datasets/" target="_blank" rel="noreferrer">NCBI Datasets</a>. {l("MANE Select is preferred; if unavailable, the longest protein-coding RefSeq transcript is used.")}
                   </div>
@@ -325,16 +363,30 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
             )}
 
             {application === "normal_editing" && <fieldset className="adar-picker">
-              <legend>{l("ADAR environment")} <InfoTip>ADAR1: arRNA 5′ ≥4 nt · 3′ ≥20 nt; ADAR2: arRNA 5′ ≥6 nt · 3′ ≥11 nt {l("paired nt")}</InfoTip></legend>
+              <legend>{l("ADAR environment")} <InfoTip>Target RNA: ADAR1 −4…+25; ADAR2 −6…+11. A₀ = 0.</InfoTip></legend>
               <label className={adarEnvironment === "ADAR1" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR1"} onChange={() => setAdarEnvironment("ADAR1")} /><span><strong>ADAR1</strong></span></label>
               <label className={adarEnvironment === "ADAR2" ? "selected" : ""}><input type="radio" name="adar-environment" checked={adarEnvironment === "ADAR2"} onChange={() => setAdarEnvironment("ADAR2")} /><span><strong>ADAR2</strong></span></label>
             </fieldset>}
 
+            {application === "normal_editing" && <details className="simple-disclosure"><summary>{l("Target coverage and internal bulge")}</summary>
+              <div className="protocol-settings">
+                <p>{l("Shift or change target coverage while preserving the ADAR-binding region. Coordinates refer to target RNA, with A0 = 0.")}</p>
+                <div className="form-row"><div><label htmlFor="window-start">{l("Window start relative to A0")}</label><input id="window-start" type="number" max="0" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} /></div>
+                  <div><label htmlFor="window-end">{l("Window end relative to A0")}</label><input id="window-end" type="number" min="0" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} /></div></div>
+                <small>{l("Target coverage length differs from guide length after deletions. Figure 4 illustrates guides of about 73–250 nt; validate altered lengths experimentally.")}</small>
+                <small>{l("The final text specifies ≥5 nt external flanks, while the Figure 4c box specifies ≥10 nt. Designs here retain ≥10 complementary nt on each side.")}</small>
+                <label className="protocol-check"><input type="checkbox" checked={includeInternalBulge} onChange={(e) => setIncludeInternalBulge(e.target.checked)} />{l("Also test an optional 1/0 internal bulge at +4")}</label>
+              </div>
+            </details>}
+
             {application === "exon_skipping" && (
-              <details className="simple-disclosure"><summary>{l("Advanced settings")} · {arrnaLength} nt</summary><div className="length-control">
+              <details className="simple-disclosure"><summary>{l("Advanced settings")} · {arrnaLength} nt</summary><div className="length-control protocol-settings">
                 <label htmlFor="arrna-length">arRNA length x <span>{l("default 151 nt")}</span></label>
                 <input id="arrna-length" type="number" min="21" max="1001" value={arrnaLength} onChange={(event) => setArrnaLength(event.target.value)} />
-                <small>{l("Exons are classified as < x/2, x/2–x, or > x.")}</small>
+                <small>{l("151 nt is the initial design; Figure 4 illustrates about 31–250 nt. Exon groups are <70, 70–150 and >150 nt; coverage and activity determine additional guides.")}</small>
+                <label className="protocol-check"><input type="checkbox" checked={evaluateCoveredEse} onChange={(e) => setEvaluateCoveredEse(e.target.checked)} />{l("Evaluate SA-covered ESEs when SA activity is insufficient")}</label>
+                <label htmlFor="ese-mismatches">{l("Optional ESE A/C mismatches")}</label>
+                <input id="ese-mismatches" value={eseMismatchPositions} onChange={(e) => setEseMismatchPositions(e.target.value)} placeholder={l("Exon A coordinates, e.g. 12, 48")}/>
               </div></details>
             )}
 
@@ -350,26 +402,28 @@ export function DesignWorkspace({ onExit, onRefine, initialExample, initialAppli
               application={application}
               sequence={cleanSequence}
               position={Number(position)}
+              sourceLabel={mode === "gene" ? [gene, application === "normal_editing" ? normalReference?.transcript : reference?.transcript ?? transcriptAccession].filter(Boolean).join(" · ") : undefined}
             /></details>
             {application === "normal_editing" ? (
               <TranscriptPreview
                 mode={mode === "gene" && normalReference ? "sequence" : mode}
-                sourceLabel={normalReference ? `${normalReference.gene} · ${normalReference.transcript} CDS` : undefined}
+                sourceLabel={mode === "gene" && normalReference ? `${normalReference.gene} · ${normalReference.transcript} CDS` : undefined}
                 sequence={cleanSequence}
                 position={Number(position)}
+                codingContext={useCodingContext}
                 onPositionChange={(nextPosition) => setPosition(String(nextPosition))}
               />
             ) : (
               <details className="simple-disclosure"><summary>{l("Exon skipping logic")}</summary><div className="preview-panel exon-principle-preview">
                 <div className="preview-header">
-                  <span>{l("Exon skipping logic")} <InfoTip align="left">{l("ESE candidates are perfectly complementary. ESEfinder 3.0 scores the five published matrices at their official thresholds; motifs containing A are retained and overlapping hits are merged into candidate regions.")} <a href="https://esefinder.ahc.umn.edu/cgi-bin/tools/ESE3/esefinder.cgi?process=matrices" target="_blank" rel="noreferrer">ESEfinder 3.0 ↗</a></InfoTip></span>
+                  <span>{l("Exon skipping logic")} <InfoTip align="left">{l("Start with an SA A/C guide. Evaluate ESE regions not fully covered, or additional guides when SA activity is insufficient. Optional A/C mismatches can target other splicing-related A sites. Predicted ESEs require experimental confirmation.")} <a href="https://esefinder.ahc.umn.edu/cgi-bin/tools/ESE3/esefinder.cgi?process=matrices" target="_blank" rel="noreferrer">ESEfinder 3.0 ↗</a></InfoTip></span>
                   <span>x = {arrnaLength || "—"} nt</span>
                 </div>
                 <div className="exon-input-map"><span>INTRON X−1</span><i>SA</i><strong>EXON X</strong><i>SD</i><span>INTRON X</span></div>
                 <div className="design-rule-list">
-                  <div><b>&lt; x/2</b><span>{l("One SA-centered guide")}</span></div>
-                  <div><b>x/2 – x</b><span>{l("SA guide + minimum ESE coverage")}</span></div>
-                  <div><b>&gt; x</b><span>{l("SA guide + fewest ESE guides")}</span></div>
+                  <div><b>&lt;70 nt</b><span>{l("Check SA coverage across the exon and toward the donor")}</span></div>
+                  <div><b>70–150 nt</b><span>{l("Evaluate ESE regions not adequately covered by SA")}</span></div>
+                  <div><b>&gt;150 nt</b><span>{l("Evaluate spatially separated ESE regions")}</span></div>
                 </div>
               </div></details>
             )}

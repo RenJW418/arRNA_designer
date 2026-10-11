@@ -1,11 +1,10 @@
-import { ArrowRight, Check, Copy, Scissors, Search } from "lucide-react";
+import { ArrowRight, Check, Copy, Search } from "lucide-react";
 import { CSSProperties, useState } from "react";
 import {
   AdarEnvironment,
   EditingSite,
   InitialArrnaDesign,
   NormalArrnaVariant,
-  reverseComplement,
   translateCodon,
 } from "../lib/normalEditing";
 import { NcbiCodingReference } from "../lib/exonSkipping";
@@ -35,6 +34,7 @@ const CATEGORY_LABELS: Record<EditingSite["category"], string> = {
   blocked_ga: "GA difficult",
   synonymous: "Synonymous",
   editable: "Editable",
+  rna: "Target RNA adenosine",
 };
 
 const AMINO_ACIDS: Record<string, string> = {
@@ -51,6 +51,13 @@ interface TranslationBlock {
 }
 
 const VARIANT_ROW_SIZE = 30;
+
+const CANDIDATE_NAMES: Record<string, string> = {
+  baseline: "Baseline",
+  "downstream-del10": "Downstream +34",
+  "upstream-del28": "Upstream −31",
+  "dual-deletion": "Dual deletion",
+};
 
 interface VariantPairingProps {
   design: InitialArrnaDesign;
@@ -88,8 +95,8 @@ function NormalPairingSchematic({ design, sites, variant }: NormalPairingSchemat
   const left = 92;
   const right = 1160;
   const plotWidth = right - left;
-  const targetY = 100;
-  const guideY = 178;
+  const targetY = 86;
+  const guideY = 142;
   const windowLength = design.targetWindow.length;
   const denominator = Math.max(windowLength - 1, 1);
   const xForIndex = (index: number) => left + (index / denominator) * plotWidth;
@@ -97,8 +104,6 @@ function NormalPairingSchematic({ design, sites, variant }: NormalPairingSchemat
   const deletionSegments = groupDeletionCoordinates(variant.deletionCoordinates);
   const deletedCoordinates = new Set(variant.deletionCoordinates);
   const visibleSites = sites.filter((editingSite) => editingSite.position >= design.windowStart && editingSite.position <= design.windowEnd);
-  const focusStart = Math.max(0, design.targetIndex - 25);
-  const focusEnd = Math.min(windowLength - 1, design.targetIndex + 25);
 
   let targetPath = `M ${left} ${targetY}`;
   deletionSegments.forEach((segment) => {
@@ -119,19 +124,14 @@ function NormalPairingSchematic({ design, sites, variant }: NormalPairingSchemat
   };
 
   return <section className="normal-pairing-schematic" aria-label={`${variant.shortLabel} target and arRNA overview`}>
-    <div className="normal-schematic-heading">
-      <div><strong>{windowLength} nt {l("pairing overview")}</strong><span>{l("Selected design")} · {l(variant.shortLabel)}</span></div>
-      <span>{design.windowStart}–{design.windowEnd}</span>
-    </div>
     <div className="normal-schematic-scroll">
-      <svg viewBox={`0 0 ${width} 248`} role="img" aria-labelledby="normal-schematic-title normal-schematic-description">
-        <title id="normal-schematic-title">Target and arRNA pairing schematic</title>
+      <svg viewBox={`0 0 ${width} 196`} role="img" aria-labelledby="normal-schematic-title normal-schematic-description">
+        <title id="normal-schematic-title">{l("Target and arRNA pairing schematic")}</title>
         <desc id="normal-schematic-description">The target strand is shown above the shorter arRNA. Target regions left unpaired by arRNA deletions curve outward as bulges.</desc>
-        <rect className="normal-schematic-focus" x={xForIndex(focusStart)} y="42" width={Math.max(xForIndex(focusEnd) - xForIndex(focusStart), 2)} height="158" rx="8" />
 
         <text className="normal-schematic-strand-label target" x="14" y={targetY + 4}>TARGET</text>
-        <text className="normal-schematic-direction" x={left} y="27">5′</text>
-        <text className="normal-schematic-direction" x={right} y="27" textAnchor="end">3′</text>
+        <text className="normal-schematic-direction" x={left} y={targetY - 13}>5′</text>
+        <text className="normal-schematic-direction" x={right} y={targetY - 13} textAnchor="end">3′</text>
         <path className={`normal-schematic-target-line ${deletionSegments.length ? "with-bulge" : ""}`} d={targetPath} />
         <line className="normal-schematic-end" x1={left} x2={left} y1={targetY - 9} y2={targetY + 9} />
         <line className="normal-schematic-end" x1={right} x2={right} y1={targetY - 9} y2={targetY + 9} />
@@ -154,7 +154,7 @@ function NormalPairingSchematic({ design, sites, variant }: NormalPairingSchemat
           </g>;
         })}
 
-        <text className="normal-schematic-target-coordinate" x={xForIndex(design.targetIndex)} y="110" textAnchor="middle">A{design.targetPosition} · 0</text>
+        <text className="normal-schematic-target-coordinate" x={xForIndex(design.targetIndex)} y={targetY + 22} textAnchor="middle">A{design.targetPosition} · 0</text>
 
         <text className="normal-schematic-strand-label guide" x="14" y={guideY + 4}>arRNA</text>
         <text className="normal-schematic-direction guide" x={left} y={guideY + 29}>3′</text>
@@ -178,11 +178,9 @@ function NormalPairingSchematic({ design, sites, variant }: NormalPairingSchemat
       </svg>
     </div>
     <div className="normal-schematic-legend">
-      <span><i className="target-line" />Target 5′→3′</span>
-      <span><i className="guide-line" />arRNA 3′→5′</span>
-      <span><i className="editable-a" />{l("Editable A")}</span>
-      <span><i className="synonymous-a" />{l("Synonymous A")}</span>
-      <span><i className="ga-a" />{l("GA difficult")}</span>
+      <span><i className="editable-a" />{l(sites.some((site) => site.category === "rna") ? "Target RNA adenosine" : "Editable A")}</span>
+      {!sites.some((site) => site.category === "rna") && <><span><i className="synonymous-a" />{l("Synonymous A")}</span>
+      <span><i className="ga-a" />{l("GA difficult")}</span></>}
       {deletionSegments.length > 0 && <span><i className="bulge-line" />{l("Unpaired target bulge")}</span>}
     </div>
   </section>;
@@ -206,7 +204,7 @@ function VariantPairing({ design, sites, variant }: VariantPairingProps) {
     {chunks.map((chunk) => {
       const firstRelative = chunk.offset - design.targetIndex;
       const lastRelative = firstRelative + chunk.target.length - 1;
-      const columns = { "--variant-columns": chunk.target.length } as CSSProperties;
+      const columns = { "--variant-columns": VARIANT_ROW_SIZE } as CSSProperties;
       return <div className="normal-pairing-chunk" style={columns} key={chunk.offset}>
         <div className="normal-relative-ruler"><span>{firstRelative > 0 ? `+${firstRelative}` : firstRelative}</span><span>{lastRelative > 0 ? `+${lastRelative}` : lastRelative}</span></div>
         <div className="normal-pairing-strand normal-target-strand">
@@ -216,12 +214,12 @@ function VariantPairing({ design, sites, variant }: VariantPairingProps) {
             const relative = windowIndex - design.targetIndex;
             const globalPosition = design.windowStart + windowIndex;
             const editingSite = sitesByPosition.get(globalPosition);
-            return <span className={`${editingSite ? `normal-site-${editingSite.category}` : ""} ${relative === 0 ? "normal-target-a" : ""} ${deletedCoordinates.has(relative) ? "normal-gap-target" : ""}`} title={`A-relative coordinate ${relative > 0 ? `+${relative}` : relative}; CDS ${globalPosition}`} key={globalPosition}>{base}</span>;
+            return <span className={`${editingSite ? `normal-site-${editingSite.category}` : ""} ${relative === 0 ? "normal-target-a" : ""} ${deletedCoordinates.has(relative) ? "normal-gap-target" : ""}`} title={`A-relative coordinate ${relative > 0 ? `+${relative}` : relative}; target ${globalPosition}`} key={globalPosition}>{base}</span>;
           })}</div>
         </div>
         <div className="normal-pairing-connectors"><span /><div>{chunk.target.split("").map((_, index) => {
           const relative = chunk.offset + index - design.targetIndex;
-          return <i className={deletedCoordinates.has(relative) ? "gap" : ""} key={relative}>{deletedCoordinates.has(relative) ? "" : "|"}</i>;
+          return <i className={deletedCoordinates.has(relative) ? "gap" : relative === 0 ? "mismatch" : ""} key={relative}>{deletedCoordinates.has(relative) ? "" : relative === 0 ? "•" : "|"}</i>;
         })}</div></div>
         <div className="normal-pairing-strand normal-guide-strand">
           <span className="normal-pairing-label"><b>arRNA</b><i>3′→5′</i></span>
@@ -232,7 +230,7 @@ function VariantPairing({ design, sites, variant }: VariantPairingProps) {
         </div>
       </div>;
     })}
-    <div className="normal-pairing-legend"><span><i className="normal-legend-target" />{l("Target A")}</span><span><i className="normal-legend-editable" />{l("Editable A")}</span><span><i className="normal-legend-synonymous" />{l("Synonymous A")}</span><span><i className="normal-legend-ga" />{l("GA difficult")}</span>{variant.deletionCoordinates.length > 0 && <span><i className="normal-legend-gap" />{l("Deletion gap")}</span>}</div>
+    <div className="normal-pairing-legend"><span><i className="normal-legend-target" />{l("Target A")}</span><span><i className="normal-legend-editable" />{l(sites.some((site) => site.category === "rna") ? "Target RNA adenosine" : "Editable A")}</span>{!sites.some((site) => site.category === "rna") && <><span><i className="normal-legend-synonymous" />{l("Synonymous A")}</span><span><i className="normal-legend-ga" />{l("GA difficult")}</span></>}{variant.deletionCoordinates.length > 0 && <span><i className="normal-legend-gap" />{l("Deletion gap")}</span>}</div>
     <div className="normal-variant-output"><span>{l("arRNA output")} · 5′→3′</span><code>{variant.arrnaSequence}</code><small>{variant.arrnaSequence.length} nt</small></div>
   </div>;
 }
@@ -240,10 +238,16 @@ function VariantPairing({ design, sites, variant }: VariantPairingProps) {
 export function InitialArrnaResult({ design, variants, result, sequence, site, sites, environment, reference, onTargetChange, onRevise, onRefine }: Props) {
   const { l } = useLanguage();
   const [copied, setCopied] = useState(false);
-  const [selectedVariantId, setSelectedVariantId] = useState("baseline");
+  const [selectedVariantId, setSelectedVariantId] = useState(() =>
+    (result.normalized_input.include_internal_bulge ? variants.find((v) => v.id === "dual-deletion-internal-del1") : undefined)?.id
+    ?? variants.find((v) => v.id === "dual-deletion")?.id
+    ?? variants.find((v) => v.id === (environment === "ADAR1" ? "downstream-del10" : "upstream-del28"))?.id
+    ?? variants[0]?.id ?? "baseline",
+  );
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? variants[0];
   const sitesByPosition = new Map(sites.map((editingSite) => [editingSite.position, editingSite]));
   const targetIndex = design.targetPosition - 1;
+  const codingContext = result.normalized_input.coding_context !== false;
 
   const overviewStart = Math.max(0, targetIndex - 76);
   const overviewEnd = Math.min(sequence.length, targetIndex + 77);
@@ -254,16 +258,14 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
   const focusEnd = Math.min(sequence.length, targetIndex + 26);
   const focusSequence = sequence.slice(focusStart, focusEnd);
   const focusTargetIndex = targetIndex - focusStart;
-  const alignedGuide = reverseComplement(focusSequence)
-    .split("")
-    .reverse()
-    .map((base, index) => index === focusTargetIndex ? "C" : base)
-    .join("");
-  const guideCoordinate = design.arrnaSequence.length - design.targetIndex;
+  const alignedGuide = Array.from(focusSequence, (_, index) =>
+    selectedVariant.alignedGuide[focusStart + index + 1 - design.windowStart] ?? "-",
+  ).join("");
+  const guideCoordinate = selectedVariant.alignedGuide.slice(design.targetIndex).replace(/-/g, "").length;
 
   const translationBlocks: TranslationBlock[] = [];
   const firstCodonStart = Math.floor(focusStart / 3) * 3;
-  for (let codonStart = firstCodonStart; codonStart < focusEnd; codonStart += 3) {
+  for (let codonStart = firstCodonStart; codingContext && codonStart < focusEnd; codonStart += 3) {
     const visibleStart = Math.max(codonStart, focusStart);
     const visibleEnd = Math.min(codonStart + 3, focusEnd);
     const codon = sequence.slice(codonStart, codonStart + 3);
@@ -300,92 +302,64 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
     downloadText(`LEAPER_arRNA_A${design.targetPosition}_${environment}.json`, serializeJson(exportBundle()), "application/json;charset=utf-8");
   }
 
-  const visibleWarnings = result.warnings.filter(
-    (warning) => warning !== "The target does not have the complete 75-nt context on both sides.",
-  );
+  const visibleWarnings = result.warnings;
+  const pairedUpstream = design.upstreamLength - selectedVariant.deletionCoordinates.filter((p) => p < 0).length;
+  const pairedDownstream = design.downstreamLength - selectedVariant.deletionCoordinates.filter((p) => p > 0).length;
 
   return (
-    <section className="arrna-result normal-result-page task-result-page" aria-live="polite">
-      <div className="arrna-result-header">
+    <section className="arrna-result normal-result-page task-result-page normal-tool-result" aria-live="polite">
+      <div className="arrna-result-header normal-tool-header">
         <div>
-          <p className="eyebrow preserve-arrna-case">{l("Normal editing result")}</p>
-          <h1>A{design.targetPosition} · {environment} · {variants.length} {l(variants.length === 1 ? "candidate" : "candidates")}</h1>
+          <h1>{l("arRNA designs")}</h1>
+          <p className="normal-tool-meta">A{design.targetPosition} · {environment} · {variants.length} {l(variants.length === 1 ? "candidate" : "candidates")}</p>
         </div>
-        <button className="button button-secondary" type="button" onClick={onRevise}>{l("Revise target")}</button>
+        <div className="normal-tool-header-actions">
+          <button className="button button-secondary" type="button" onClick={onRevise}>{l("Revise target")}</button>
+        </div>
       </div>
-
-      <details className="simple-disclosure"><summary>{l("Design details")} · A{design.targetPosition} · {environment}</summary><dl className="result-key-facts">
-        <div><dt>{l("Target")}</dt><dd>A{design.targetPosition}</dd></div>
-        <div><dt>{l("Environment")}</dt><dd>{environment}</dd></div>
-        <div><dt>{l("Site class")}</dt><dd>{l(CATEGORY_LABELS[site.category])}</dd></div>
-        <div><dt>{l("Pairing context")} <InfoTip>{l("Arm lengths are the paired target nucleotides upstream and downstream of the selected A.")}</InfoTip></dt><dd>{design.targetWindow.length} nt · {design.upstreamLength}/{design.downstreamLength} nt {l("arms")}</dd></div>
-      </dl></details>
 
       {visibleWarnings.length > 0 && <div className="result-warning-list" role="note">{visibleWarnings.map((warning) => <p key={warning}>{l(warning)}</p>)}</div>}
 
-      {reference && <div className="normal-reference-source"><span>{l("NCBI reference CDS")}</span><strong>{reference.gene} · {reference.transcript} · {reference.selection}</strong><small>{reference.species} · CDS {reference.cds_start}–{reference.cds_end} · {reference.cds_sequence.length.toLocaleString()} nt</small><a href="https://www.ncbi.nlm.nih.gov/datasets/" target="_blank" rel="noreferrer">NCBI Datasets ↗</a></div>}
-
-      <section className="normal-variant-section result-primary-panel" aria-labelledby="variant-choice-title">
-        <div className="normal-variant-heading simplified">
-          <div className="result-step-heading">
-            <span>1</span>
-            <div><p className="eyebrow">{l("Choose a version")}</p><h2 id="variant-choice-title">{l("Available arRNA designs")}</h2></div>
-          </div>
-          <span>{variants.length}/4 {l("versions available")}</span>
-        </div>
-
-        <aside className="normal-candidate-sidebar" aria-label={l("Available arRNA designs")}>
-        <div className="normal-variant-cards simplified">
+      <section className="normal-variant-section result-primary-panel normal-tool-workspace" aria-label={l("Available arRNA designs")}>
+        <div className="normal-candidate-picker" role="group" aria-label={l("Choose a candidate")}>
           {variants.map((variant) => (
             <button
               type="button"
-              className={`normal-variant-card ${selectedVariant.id === variant.id ? "selected" : ""}`}
+              className="normal-candidate-option"
               aria-pressed={selectedVariant.id === variant.id}
-              onClick={() => setSelectedVariantId(variant.id)}
+              aria-label={`${l(variant.label)}, ${variant.arrnaSequence.length} nt`}
+              onClick={() => { setSelectedVariantId(variant.id); setCopied(false); }}
               key={variant.id}
             >
-              <span><Scissors size={14} />{l(variant.label)}</span>
-              <strong>{variant.arrnaSequence.length} nt</strong>
-              <small>{l(variant.shortLabel)} · {variant.deletionCoordinates.length === 0 ? l("A–C mismatch only") : `${variant.deletionCoordinates.length} ${l("nt deleted")}`}</small>
+              <span className="normal-candidate-name"><span>{l(CANDIDATE_NAMES[variant.id.replace(/-internal-del1$/, "")] ?? variant.label)}{variant.id.endsWith("-internal-del1") && <small> · +4</small>}</span><strong>{variant.arrnaSequence.length} nt</strong></span>
+              <small className="normal-candidate-change">{variant.deletionCoordinates.length === 0 ? l("A–C mismatch only") : `${variant.deletionCoordinates.length} ${l("nt deleted")}`}</small>
             </button>
           ))}
         </div>
 
-        {design.downstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Downstream +34 deletion arRNA and Dual-deletion arRNA require 75 downstream nt.")} <InfoTip>{l("This preserves 32 paired nt beyond A+43.")}</InfoTip></div>}
-        {design.upstreamLength < 75 && <div className="variant-unavailable-note">{l("Unavailable: Upstream −31 deletion arRNA and Dual-deletion arRNA require 75 upstream nt.")} <InfoTip>{l("This preserves 17 paired nt beyond A−58.")}</InfoTip></div>}
-        </aside>
-
-        <div className="selected-variant-explanation">
-          <span>{l("Selected candidate")}</span>
-          <strong>{l(selectedVariant.label)}</strong>
-          <InfoTip>{l(selectedVariant.description)}</InfoTip>
-        </div>
-
-        <div className="arrna-export result-primary-export">
-          <div><span>{l("Final arRNA sequence")} · 5′→3′</span><code>{selectedVariant.arrnaSequence}</code><small>{selectedVariant.arrnaSequence.length} nt · {l(selectedVariant.shortLabel)} · {l("RNA alphabet")}</small></div>
-          <div className="arrna-export-actions">
-            <button className="button button-primary" type="button" onClick={copySequence}>{copied ? <Check size={16} /> : <Copy size={16} />}{l(copied ? "Copied" : "Copy")}</button>
-            <ExportMenu onDownload={(format) => ({ fasta: downloadFasta, csv: downloadCsv, json: downloadJson })[format]()} />
-          </div>
-        </div>
-
-        <div className="result-structure-heading">
-          <div className="result-step-heading">
-            <span>2</span>
-            <div><p className="eyebrow">{l("Confirm the structure")}</p><h2>{l("Selected pairing overview")}</h2></div>
-          </div>
-          <InfoTip>{l("The schematic updates to show the structural consequence of the selected arRNA version.")}</InfoTip>
+        {design.downstreamLength < 53 && <div className="variant-unavailable-note">{l("The +34 external bulge needs coverage through +53 to retain 10 paired nt beyond the bulge.")}</div>}
+        {design.upstreamLength < 68 && <div className="variant-unavailable-note">{l("The −31 external bulge needs coverage through −68 to retain 10 paired nt beyond the bulge.")}</div>}
+        <div className="normal-selected-note">
+          <strong>{l("Pairing")}</strong>
+          <span>{l("Target")} {design.windowStart}–{design.windowEnd} · {design.targetWindow.length} nt</span>
+          <InfoTip><p>{l(selectedVariant.description)}</p><p>{l("The schematic updates to show the structural consequence of the selected arRNA version.")}</p></InfoTip>
         </div>
         <NormalPairingSchematic design={design} sites={sites} variant={selectedVariant} />
+
+        <div className="arrna-export result-primary-export normal-sequence-export">
+          <div className="normal-sequence-heading">
+            <span>{l("arRNA sequence")} · 5′→3′ <small>{selectedVariant.arrnaSequence.length} nt</small></span>
+            <div className="arrna-export-actions">
+              <button className="button button-primary" type="button" onClick={copySequence}>{copied ? <Check size={16} /> : <Copy size={16} />}{l(copied ? "Copied" : "Copy")}</button>
+              <ExportMenu onDownload={(format) => ({ fasta: downloadFasta, csv: downloadCsv, json: downloadJson })[format]()} />
+            </div>
+          </div>
+          <code className="normal-sequence-text">{selectedVariant.arrnaSequence}</code>
+        </div>
       </section>
 
-      <aside className="result-refinement-cta">
-        <div>
-          <p className="eyebrow">{l("After experimental testing")}</p>
-          <h2>{l("Have editing-efficiency data for this arRNA?")}</h2>
-          <p>{l("Open the independent refinement module with the selected target and arRNA prefilled. You will confirm the alignment before entering measurements.")}</p>
-        </div>
-        <button className="button button-primary" type="button" onClick={() => onRefine({
+      <aside className="normal-refine-row">
+        <button className="button button-secondary" type="button" title={l("Open the independent refinement module with the selected target and arRNA prefilled. You will confirm the alignment before entering measurements.")} onClick={() => onRefine({
           source: "generated",
           label: selectedVariant.label,
           targetSequence: sequence,
@@ -403,17 +377,27 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
             targetIndex: design.targetIndex,
             deletionCoordinates: selectedVariant.deletionCoordinates,
           }),
-        })}>{l("Optimize this tested arRNA")}<ArrowRight size={16} /></button>
+        })}>{l("Refine after experiment")}<ArrowRight size={14} /></button>
       </aside>
 
-      <details className="result-disclosure">
+      <details className="result-disclosure normal-tool-detail normal-parameters">
+        <summary><span><strong>{l("Parameters")}</strong></span></summary>
+        <dl className="result-key-facts">
+          <div><dt>{l("Target")}</dt><dd>A{design.targetPosition}</dd></div>
+          <div><dt>{l("Environment")}</dt><dd>{environment}</dd></div>
+          <div><dt>{l("Site class")}</dt><dd>{l(CATEGORY_LABELS[site.category])}</dd></div>
+          <div><dt>{l("Pairing context")} <InfoTip>{l("Coverage includes unpaired bulge bases; paired counts exclude deleted guide positions.")}</InfoTip></dt><dd>{design.targetWindow.length} nt {l("target coverage")} · {pairedUpstream}/{pairedDownstream} nt {l("paired arms")}</dd></div>
+        </dl>
+        {reference && <div className="normal-reference-source"><span>{l("NCBI reference CDS")}</span><strong>{reference.gene} · {reference.transcript} · {reference.selection}</strong><small>{reference.species} · CDS {reference.cds_start}–{reference.cds_end} · {reference.cds_sequence.length.toLocaleString()} nt</small><a href="https://www.ncbi.nlm.nih.gov/datasets/" target="_blank" rel="noreferrer">NCBI Datasets ↗</a></div>}
+      </details>
+
+      <details className="result-disclosure normal-tool-detail">
         <summary>
-          <span className="disclosure-index">A</span>
-          <span><strong>{l("Target site and codon context")}</strong></span>
+          <span><strong>{l(codingContext ? "Target site and codon context" : "Target RNA context")}</strong></span>
         </summary>
         <div className="result-disclosure-body">
       <div className="sequence-design-figure">
-        <section className="sequence-overview" aria-label="153 nucleotide overview">
+        <section className="sequence-overview" aria-label={`${overviewLength} nucleotide overview`}>
           <div className="overview-heading"><strong>{overviewLength} nt overview</strong><span>{overviewStart + 1}-{overviewEnd}</span></div>
           <div className="overview-axis">
             <span className="overview-start">{overviewStart + 1}</span>
@@ -468,22 +452,22 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
                       const editingSite = sitesByPosition.get(position);
                       const siteClass = editingSite ? `focus-site-${editingSite.category}` : "";
                       const selected = index === focusTargetIndex;
-                      const title = editingSite ? `A${position}: ${CATEGORY_LABELS[editingSite.category]}; ${editingSite.codon} → ${editingSite.editedCodon}; ${editingSite.aminoAcid} → ${editingSite.editedAminoAcid}` : `Target position ${position}`;
+                      const title = editingSite ? codingContext ? `A${position}: ${CATEGORY_LABELS[editingSite.category]}; ${editingSite.codon} → ${editingSite.editedCodon}; ${editingSite.aminoAcid} → ${editingSite.editedAminoAcid}` : `A${position}: ${CATEGORY_LABELS[editingSite.category]}` : `Target position ${position}`;
                       return editingSite
                         ? <button type="button" className={`${siteClass} focus-clickable-a ${selected ? "focus-selected-target" : ""}`} title={title} aria-label={`Select A${position}, ${CATEGORY_LABELS[editingSite.category]}`} aria-pressed={selected} onClick={() => onTargetChange(position)} key={position}>{base}</button>
                         : <span title={title} key={position}>{base}</span>;
                     })}
                   </div>
                 </div>
-                <div className="focus-pair-lines"><span /> <div>{focusSequence.split("").map((_, index) => <i key={index}>|</i>)}</div></div>
+                <div className="focus-pair-lines"><span /> <div>{focusSequence.split("").map((_, index) => <i key={index}>{alignedGuide[index] === "-" ? "" : index === focusTargetIndex ? "•" : "|"}</i>)}</div></div>
                 <div className="focus-strand guide-focus-strand">
                   <span className="focus-strand-label"><b>arRNA guide</b><i>3′→5′</i></span>
                   <div className="focus-bases">
                     {alignedGuide.split("").map((base, index) => {
                       const position = focusStart + index + 1;
                       const editingSite = sitesByPosition.get(position);
-                      const pairedClass = editingSite ? `focus-paired-${editingSite.category}` : "";
-                      return <span className={`${pairedClass} ${index === focusTargetIndex ? "focus-paired-target" : ""}`} title={editingSite ? `Paired with target A${position}: ${CATEGORY_LABELS[editingSite.category]}` : undefined} key={position}>{base}</span>;
+                      const pairedClass = base === "-" ? "normal-deletion-gap" : editingSite ? `focus-paired-${editingSite.category}` : "";
+                      return <span className={`${pairedClass} ${index === focusTargetIndex ? "focus-paired-target" : ""}`} title={base === "-" ? l("Unpaired target bulge") : editingSite ? `Aligned opposite target A${position}: ${CATEGORY_LABELS[editingSite.category]}` : undefined} key={position}>{base}</span>;
                     })}
                   </div>
                 </div>
@@ -496,17 +480,17 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
             <div className="selected-site-inspector">
               <h2>A{site.position}</h2>
               <dl>
-                <div><dt>{l("Codon")}</dt><dd>{site.codon} → {site.editedCodon}</dd></div>
-                <div><dt>{l("Translation")}</dt><dd>{AMINO_ACIDS[site.aminoAcid]} → {AMINO_ACIDS[site.editedAminoAcid]}</dd></div>
+                {codingContext && <><div><dt>{l("Codon")}</dt><dd>{site.codon} → {site.editedCodon}</dd></div>
+                <div><dt>{l("Translation")}</dt><dd>{AMINO_ACIDS[site.aminoAcid]} → {AMINO_ACIDS[site.editedAminoAcid]}</dd></div></>}
                 <div><dt>{l("Property")}</dt><dd className={`inspector-${site.category}`}>{l(CATEGORY_LABELS[site.category])}</dd></div>
                 <div><dt>{l("Guide coordinate")}</dt><dd>{guideCoordinate}</dd></div>
               </dl>
             </div>
             <div className="sequence-property-legend">
               <span><i className="property-selected" />{l("Selected A")}</span>
-              <span><i className="property-editable" />{l("Editable A")}</span>
+              {codingContext && <><span><i className="property-editable" />{l("Editable A")}</span>
               <span><i className="property-synonymous" />{l("Synonymous A")}</span>
-              <span><i className="property-ga" />{l("GA difficult")}</span>
+              <span><i className="property-ga" />{l("GA difficult")}</span></>}
             </div>
           </aside>
         </div>
@@ -514,9 +498,8 @@ export function InitialArrnaResult({ design, variants, result, sequence, site, s
         </div>
       </details>
 
-      <details className="result-disclosure">
+      <details className="result-disclosure normal-tool-detail">
         <summary>
-          <span className="disclosure-index">B</span>
           <span><strong>{l("Full base-by-base pairing")}</strong></span>
         </summary>
         <div className="result-disclosure-body pairing-detail-body">
