@@ -1,0 +1,85 @@
+/* Shared interface colors. Scientific evidence and structure legends keep
+   their own categorical colors in the relevant components. */
+:root {
+  --ui-ink: #292824;
+  --ui-muted: #6c685f;
+  --ui-canvas: #faf9f6;
+  --ui-surface: #ffffff;
+  --ui-line: #e5e0d7;
+  --ui-line-strong: #c6b99c;
+  --ui-soft: #f4f1e9;
+  --ui-hover: #eee9de;
+  --ui-accent: #302e29;
+  --ui-accent-hover: #191814;
+  --ui-focus: #92753f;
+  --ui-gold: #806739;
+  --ui-gold-soft: #f5eedf;
+  --ui-disabled-ink: #8a857a;
+}
+
+:root,
+.simplified-app {
+  --ink: var(--ui-ink);
+  --muted: var(--ui-muted);
+  --paper: var(--ui-canvas);
+  --surface: var(--ui-surface);
+  --line: var(--ui-line);
+  --accent: var(--ui-accent);
+  --accent-dark: var(--ui-accent-hover);
+  --guide: var(--ui-accent);
+  --figure-blue: var(--ui-soft);
+  color: var(--ui-ink);
+  background: var(--ui-canvas);
+}
+
+.simplified-app .site-header .brand-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 72px;
+  height: 26px;
+  object-fit: contain;
+  background: transparent;
+}
+.simplified-app .site-header { border-bottom-color: var(--ui-line); }
+.simplified-app footer { background: var(--ui-canvas); }
+.simplified-app :is(.help-guide, .citation-page, .method-page-intro) {
+  color: var(--ui-ink);
+}
+.simplified-app .info-tip-trigger { border-color: var(--ui-line-strong); color: var(--ui-gold); }
+.simplified-app .info-tip-trigger:hover,
+.simplified-app .info-tip-trigger:focus-visible,
+.simplified-app .info-tip.open .info-tip-trigger { border-color: var(--ui-accent); background: var(--ui-accent); color: var(--ui-surface); }
+.simplified-app .info-tip-content { border-color: var(--ui-line); background: var(--ui-surface); color: var(--ui-ink); }
+
+/* Keep native select behavior, with a consistent inset chevron. */
+:root select:not([multiple]):where(:not([size]), [size="0"], [size="1"]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: var(--select-padding-end, 40px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='m3 5 4 4 4-4' fill='none' stroke='%236c685f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--select-arrow-inset, 12px) center;
+  background-size: 14px 14px;
+  cursor: pointer;
+  transition: border-color .15s ease;
+}
+:root .bulge-size-field {
+  --select-padding-end: 30px;
+  --select-arrow-inset: 8px;
+}
+:root select:not(:disabled):hover:not(:focus) { border-color: var(--ui-line-strong); }
+:root select:disabled { color: var(--ui-disabled-ink); cursor: default; }
+
+.simplified-app :is(input, textarea, select):focus {
+  border-color: var(--ui-focus);
+  box-shadow: 0 0 0 2px rgba(128, 103, 57, .14);
+}
+.simplified-app .sf-sequence-box textarea:focus { box-shadow: none; }
+
+@media (forced-colors: active) {
+  :root select:not([multiple]):where(:not([size]), [size="0"], [size="1"]) {
+    -webkit-appearance: auto;
+    appearance: auto;
+    background-image: none;
+  }
+}

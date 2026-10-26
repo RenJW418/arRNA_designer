@@ -6,6 +6,9 @@ from math import ceil
 from app.schemas.design import DesignProvenance, EngineInfo, RuleSetInfo
 from app.schemas.exon_skipping import (
     ArrnaCandidate,
+    ExonDesignSettings,
+    EsePredictionSettings,
+    EseMatrixSetting,
     EseHit,
     EseRegion,
     ExonSkippingDesignRequest,
@@ -58,7 +61,7 @@ EXON_SKIPPING_PROVENANCE = DesignProvenance(
     engine=EngineInfo(name="leaper-arrna-engine", version="0.2.0"),
     ruleset=RuleSetInfo(
         id="leaper-exon-skipping",
-        version="0.1.0",
+        version="0.2.0",
     ),
 )
 
@@ -122,12 +125,73 @@ def _window_around_group(first: int, last: int, length: int, total: int) -> tupl
     return start, end
 
 
+def _apply_candidate_windows(
+    payload: ExonSkippingDesignRequest,
+    candidates: list[ArrnaCandidate],
+    hits: list[EseHit],
+    regions: list[EseRegion],
+) -> list[ArrnaCandidate]:
+    """Override existing candidates without changing their generation or motif evidence."""
+    if not payload.candidate_windows:
+        return candidates
+    full_sequence = payload.upstream_intron + payload.exon + payload.downstream_intron
+    exon_offset, exon_length = len(payload.upstream_intron), len(payload.exon)
+    indices = {candidate.id: index for index, candidate in enumerate(candidates)}
+    updated = list(candidates)
+    for window in payload.candidate_windows:
+        if window.candidate_id not in indices:
+            raise ValueError(f"Candidate {window.candidate_id} was not generated for this input")
+        index = indices[window.candidate_id]
+        original = candidates[index]
+        start, end = window.start, window.end
+        exon_start = max(1, start - exon_offset)
+        exon_end = max(0, min(exon_length, end - exon_offset))
+        full_regions = [i for i, region in enumerate(regions, 1)
+                        if exon_start <= region.start and region.end <= exon_end]
+        partial_regions = [i for i, region in enumerate(regions, 1)
+                           if region.start <= exon_end and region.end >= exon_start
+                           and i not in full_regions]
+        covered_hits = [i for i, hit in enumerate(hits, 1)
+                        if exon_start <= hit.start and hit.end <= exon_end]
+        covered_positions = sorted({position for i in covered_hits
+                                    for position in hits[i - 1].a_positions})
+        target = full_sequence[start - 1:end]
+        guide = list(reverse_complement_rna(target))
+        mismatch_target = original.mismatch_target_position if original.kind == "sa" else None
+        mismatch_arrna = None
+        mismatch_positions: list[int] = []
+        if original.kind == "sa":
+            if mismatch_target is None or not start <= mismatch_target <= end:
+                raise ValueError("The SA window must include its original target A")
+            mismatch_arrna = end - mismatch_target + 1
+            guide[mismatch_arrna - 1] = "C"
+        else:
+            if not covered_hits:
+                raise ValueError("An ESE window must contain at least one complete predicted motif")
+            mismatch_positions = [position for position in payload.ese_mismatch_positions
+                                  if exon_start <= position <= exon_end]
+            for position in mismatch_positions:
+                guide[end - (exon_offset + position)] = "C"
+        updated[index] = original.model_copy(update={
+            "target_sequence": target, "arrna_sequence": "".join(guide),
+            "global_start": start, "global_end": end,
+            "exon_start": exon_start, "exon_end": exon_end,
+            "mismatch_target_position": mismatch_target,
+            "mismatch_arrna_position": mismatch_arrna,
+            "mismatch_exon_positions": mismatch_positions,
+            "covered_region_indices": full_regions,
+            "partially_covered_region_indices": partial_regions,
+            "covered_hit_indices": covered_hits, "covered_a_positions": covered_positions,
+        })
+    return updated
+
+
 def design_exon_skipping(payload: ExonSkippingDesignRequest) -> ExonSkippingDesignResponse:
     upstream, exon, downstream = payload.upstream_intron, payload.exon, payload.downstream_intron
     full_sequence = upstream + exon + downstream
     x = payload.arrna_length
     exon_length = len(exon)
-    length_class = "short" if exon_length < x / 2 else "medium" if exon_length <= x else "long"
+    length_class = "short" if exon_length < 70 else "medium" if exon_length <= 150 else "long"
     warnings: list[str] = []
     candidates: list[ArrnaCandidate] = []
     exon_start_global = len(upstream)
@@ -150,47 +214,84 @@ def design_exon_skipping(payload: ExonSkippingDesignRequest) -> ExonSkippingDesi
             mismatch_target_position=target_index + 1,
             mismatch_arrna_position=arrna_index + 1,
         ))
-        if len(target) < x:
+        if len(target) < x and not any(
+            window.candidate_id == "sa-1" for window in payload.candidate_windows
+        ):
             warnings.append(f"SA candidate is {len(target)} nt because the supplied flanking sequence is shorter than {x} nt.")
     else:
         warnings.append("Upstream intron does not end in canonical AG; no SA candidate was generated.")
 
     hits = scan_ese(exon)
     regions = merge_ese_regions(hits)
-    needs_ese_candidates = length_class != "short" or not canonical_sa
-    if needs_ese_candidates and regions:
-        points = sorted({position for region in regions for position in region.a_positions})
+    sa = next((candidate for candidate in candidates if candidate.kind == "sa"), None)
+    if sa is not None:
+        sa.covered_region_indices = [i for i, region in enumerate(regions, 1)
+                                     if sa.exon_start <= region.start and region.end <= sa.exon_end]
+        sa.partially_covered_region_indices = [i for i, region in enumerate(regions, 1)
+            if region.start <= sa.exon_end and region.end >= sa.exon_start
+            and i not in sa.covered_region_indices]
+        sa.covered_hit_indices = [i for i, hit in enumerate(hits, 1)
+                                 if sa.exon_start <= hit.start and hit.end <= sa.exon_end]
+        sa.covered_a_positions = sorted({p for i in sa.covered_hit_indices
+                                        for p in hits[i - 1].a_positions})
+    windows: set[tuple[int, int]] = set()
+    for region in regions:
+        first_global = exon_start_global + region.start - 1
+        last_global = exon_start_global + region.end - 1
+        if (not payload.evaluate_covered_ese and sa is not None
+                and sa.global_start <= first_global + 1 and sa.global_end >= last_global + 1):
+            continue
+        if region.end - region.start + 1 <= x:
+            windows.add(_window_around_group(first_global, last_global, x, len(full_sequence)))
+            continue
+        # A long merged region is covered by groups of complete motifs, not by A counts.
+        region_hits = [hit for hit in hits if region.start <= hit.start and hit.end <= region.end]
         cursor = 0
-        candidate_number = 1
-        while cursor < len(points):
-            first = points[cursor]
-            last_index = cursor
-            while last_index + 1 < len(points) and points[last_index + 1] - first < x:
-                last_index += 1
-            last = points[last_index]
-            first_global = exon_start_global + first - 1
-            last_global = exon_start_global + last - 1
-            start, end = _window_around_group(first_global, last_global, x, len(full_sequence))
-            covered_positions = [p for p in points if start <= exon_start_global + p - 1 < end]
-            covered_regions = [
-                index for index, region in enumerate(regions, start=1)
-                if any(position in covered_positions for position in region.a_positions)
-            ]
-            target = full_sequence[start:end]
-            candidates.append(ArrnaCandidate(
-                id=f"ese-{candidate_number}", kind="ese", label=f"ESE coverage {candidate_number}",
-                target_sequence=target, arrna_sequence=reverse_complement_rna(target),
-                global_start=start + 1, global_end=end,
-                exon_start=max(1, start - exon_start_global + 1),
-                exon_end=min(exon_length, end - exon_start_global),
-                covered_a_positions=covered_positions, covered_region_indices=covered_regions,
-            ))
-            candidate_number += 1
-            cursor = last_index + 1
-            while cursor < len(points) and exon_start_global + points[cursor] - 1 < end:
+        while cursor < len(region_hits):
+            first = region_hits[cursor].start
+            last = region_hits[cursor].end
+            cursor += 1
+            while cursor < len(region_hits) and region_hits[cursor].end - first + 1 <= x:
+                last = max(last, region_hits[cursor].end)
                 cursor += 1
-    elif needs_ese_candidates and not regions:
+            windows.add(_window_around_group(
+                exon_start_global + first - 1, exon_start_global + last - 1, x, len(full_sequence)
+            ))
+
+    for candidate_number, (start, end) in enumerate(sorted(windows), 1):
+        exon_start = max(1, start - exon_start_global + 1)
+        exon_end = min(exon_length, end - exon_start_global)
+        full_regions = [i for i, region in enumerate(regions, 1)
+                        if exon_start <= region.start and region.end <= exon_end]
+        partial_regions = [i for i, region in enumerate(regions, 1)
+                           if region.start <= exon_end and region.end >= exon_start
+                           and i not in full_regions]
+        covered_hits = [i for i, hit in enumerate(hits, 1)
+                        if exon_start <= hit.start and hit.end <= exon_end]
+        covered_positions = sorted({p for i in covered_hits for p in hits[i - 1].a_positions})
+        target = full_sequence[start:end]
+        guide = list(reverse_complement_rna(target))
+        mismatches = [p for p in payload.ese_mismatch_positions if exon_start <= p <= exon_end]
+        for position in mismatches:
+            guide[len(target) - 1 - (exon_start_global + position - 1 - start)] = "C"
+        candidates.append(ArrnaCandidate(
+            id=f"ese-{candidate_number}",
+            kind="ese", label=f"ESE coverage {candidate_number}",
+            target_sequence=target, arrna_sequence="".join(guide),
+            global_start=start + 1, global_end=end, exon_start=exon_start, exon_end=exon_end,
+            covered_a_positions=covered_positions, covered_region_indices=full_regions,
+            partially_covered_region_indices=partial_regions, covered_hit_indices=covered_hits,
+            mismatch_exon_positions=mismatches,
+        ))
+    # Explicit intervals apply only after the original candidate set is complete.
+    candidates = _apply_candidate_windows(payload, candidates, hits, regions)
+    if not regions:
         warnings.append("No above-threshold ESEfinder motif containing A was found in the target exon.")
+    warnings.append("Predicted ESE motifs are candidates for experimental testing, not confirmed functional enhancers.")
+    warnings.append("Test individual guides before combinations; compare with SA alone while keeping the total nucleic acid dose constant.")
+    applied_positions = {p for c in candidates for p in c.mismatch_exon_positions}
+    if set(payload.ese_mismatch_positions) - applied_positions:
+        warnings.append("Some requested ESE A/C mismatches are outside the generated ESE guides and were not applied.")
 
     return ExonSkippingDesignResponse(
         normalized_input=ExonSkippingNormalizedInput(
@@ -213,4 +314,13 @@ def design_exon_skipping(payload: ExonSkippingDesignRequest) -> ExonSkippingDesi
         transcript=payload.transcript,
         exon_number=payload.exon_number,
         provenance=EXON_SKIPPING_PROVENANCE,
+        reference=payload.reference,
+        design_settings=ExonDesignSettings(
+            evaluate_covered_ese=payload.evaluate_covered_ese,
+            ese_mismatch_positions=payload.ese_mismatch_positions,
+            candidate_windows=payload.candidate_windows,
+        ),
+        prediction_settings=EsePredictionSettings(matrices=[
+            EseMatrixSetting(name=matrix.name, threshold=matrix.threshold) for matrix in ESE_MATRICES
+        ]),
     )

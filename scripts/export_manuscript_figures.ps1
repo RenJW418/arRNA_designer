@@ -9,15 +9,19 @@ $workspaceRoot = Split-Path -Parent $projectRoot
 $sourceRoot = Join-Path $workspaceRoot "ms\20260825 Figure"
 $outputRoot = Join-Path $projectRoot "frontend\public\figures"
 
+# Figure 4 design panels are now copied from the fixed Nature Protocols final
+# by sync_protocol_design_panels.py. Do not overwrite them with older AI art.
+$protocolPanels = @("leaper3-universal-design", "leaper3-custom-design", "leaper-exon-skipping-design")
+if (@($Only | Where-Object { $_ -in $protocolPanels }).Count -gt 0) {
+    throw "Figure 4 design panels use the Nature Protocols final PDF. Run scripts/sync_protocol_design_panels.py with pypdf and Pillow."
+}
+
 $crops = @(
     [pscustomobject]@{ Source = "Figure 2.ai"; Name = "leaper-mechanism-comparison"; Rect = @(120.0, -55.0, 510.0, -274.0) },
     [pscustomobject]@{ Source = "Figure 1.ai"; Name = "leaper-1-0"; Rect = @(114.0, -58.0, 496.0, -165.0) },
     [pscustomobject]@{ Source = "Figure 1.ai"; Name = "leaper-2-0"; Rect = @(114.0, -170.0, 496.0, -277.0) },
     [pscustomobject]@{ Source = "Figure 1.ai"; Name = "leaper-3-0"; Rect = @(114.0, -283.0, 496.0, -390.0) },
-    [pscustomobject]@{ Source = "Figure 1.ai"; Name = "leaper-exon-skipping"; Rect = @(114.0, -401.0, 520.0, -508.0) },
-    [pscustomobject]@{ Source = "Figure 4.ai"; Name = "leaper3-universal-design"; Rect = @(110.0, -30.0, 505.0, -128.0) },
-    [pscustomobject]@{ Source = "Figure 4.ai"; Name = "leaper3-custom-design"; Rect = @(102.0, -131.0, 502.0, -402.0) },
-    [pscustomobject]@{ Source = "Figure 4.ai"; Name = "leaper-exon-skipping-design"; Rect = @(130.0, -407.0, 508.0, -535.0) }
+    [pscustomobject]@{ Source = "Figure 1.ai"; Name = "leaper-exon-skipping"; Rect = @(114.0, -401.0, 520.0, -508.0) }
 )
 
 if ($Only.Count -gt 0) {

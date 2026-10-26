@@ -27,12 +27,14 @@ export function createNormalExportBundle(
   evidence?: OptimizationEvidenceState,
 ): DesignExportBundle {
   return {
+    ...result,
     schema_version: "1.0",
     application: result.application,
     generated_at: new Date().toISOString(),
     normalized_input: result.normalized_input,
     provenance: result.provenance,
     candidates: result.candidates.map((candidate) => ({
+      ...candidate,
       id: candidate.id,
       label: candidate.label,
       sequence: candidate.arrna_sequence,
@@ -46,12 +48,14 @@ export function createNormalExportBundle(
 
 export function createExonExportBundle(result: ExonSkippingDesign, selectedCandidateId: string): DesignExportBundle {
   return {
+    ...result,
     schema_version: "1.0",
     application: result.application,
     generated_at: new Date().toISOString(),
     normalized_input: result.normalized_input,
     provenance: result.provenance,
     candidates: result.candidates.map((candidate) => ({
+      ...candidate,
       id: candidate.id,
       label: candidate.label,
       sequence: candidate.arrna_sequence,

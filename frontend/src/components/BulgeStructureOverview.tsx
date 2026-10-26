@@ -5,6 +5,7 @@ import {
   createBulgeOverviewGeometry,
   createEffectZoneOverviewGeometry,
   createQualitativeOverlapRuns,
+  intervalToProtocolPosition,
 } from "../lib/bulgeOptimization";
 import { getBulgeFocusClass } from "../lib/guidedOptimization";
 import { useLanguage } from "./LanguageProvider";
@@ -93,15 +94,17 @@ export function BulgeStructureOverview({ bulges, windowStart, windowEnd, focused
         const focusClass = getBulgeFocusClass(bulge.id, focusedBulgeId);
         const className = `bulge-overview-mark ${bulge.type} ${sourceClass} ${isPreview ? "preview" : ""} ${focusClass}`;
         const topArch = `M ${x1} ${targetY} Q ${centerX} 14 ${x2} ${targetY}`;
-        const bottomArch = `M ${x1} ${guideY} Q ${centerX} 158 ${x2} ${guideY}`;
+        const bottomArch = bulge.type === "insertion"
+          ? `M ${centerX - 4} ${guideY} Q ${centerX} 150 ${centerX + 4} ${guideY}`
+          : `M ${x1} ${guideY} Q ${centerX} 158 ${x2} ${guideY}`;
         return <g className={className} aria-label={`${bulge.type}, ${bulge.size} nt, ${formatCoordinate(bulge.start)} to ${formatCoordinate(bulge.end)}`} key={bulge.id}>
-          <rect className="bulge-overview-mask" x={maskX} y={targetY - 5} width={visualWidth + 4} height="10" />
+          {bulge.type !== "insertion" && <rect className="bulge-overview-mask" x={maskX} y={targetY - 5} width={visualWidth + 4} height="10" />}
           <rect className="bulge-overview-mask" x={maskX} y={guideY - 5} width={visualWidth + 4} height="10" />
-          <path className="bulge-overview-arch top" d={topArch} />
-          {bulge.type === "mismatch"
+          {bulge.type !== "insertion" && <path className="bulge-overview-arch top" d={topArch} />}
+          {bulge.type !== "deletion"
             ? <path className="bulge-overview-arch bottom" d={bottomArch} />
             : null}
-          {(visualWidth >= 48 || focusClass === "focused") && <text className="bulge-overview-mark-label" x={centerX} y={bulge.type === "mismatch" ? 89 : guideY + 4}>{bulge.type === "deletion" ? `Deletion ${bulge.size}` : `Mismatch ${bulge.size}`}</text>}
+          {(visualWidth >= 48 || focusClass === "focused") && <text className="bulge-overview-mark-label" x={centerX} y={bulge.type === "mismatch" ? 89 : guideY + 4}>{bulge.type === "deletion" ? `Deletion ${bulge.size}` : `${bulge.type === "insertion" ? "Insertion" : "Mismatch"} ${bulge.size}`}</text>}
         </g>;
       })}
 
@@ -119,7 +122,7 @@ export function BulgeStructureOverview({ bulges, windowStart, windowEnd, focused
         const focusClass = getBulgeFocusClass(bulge.id, focusedBulgeId);
         return <g className={`bulge-overview-effect-lane ${isPreview ? "preview" : ""} ${focusClass}`} key={`${bulge.id}-lane`}>
           <text className="bulge-overview-lane-id" x="12" y={y + 10}>{`B${bulgeIndex + 1}`}</text>
-          <text className="bulge-overview-lane-type" x="38" y={y + 10}>{`${bulge.type === "deletion" ? "Del" : "Mismatch"} ${bulge.size}`}</text>
+          <text className="bulge-overview-lane-type" x="38" y={y + 10}>{`${bulge.type === "deletion" ? "Del" : bulge.type === "insertion" ? "Ins" : "Mismatch"} ${bulge.size}`}</text>
           <rect className="bulge-overview-lane-background" x={trackStart} y={y} width={trackWidth} height={laneHeight} />
           {bulge.effectZones.map((zone, zoneIndex) => {
             const geometry = createEffectZoneOverviewGeometry(bulge, zone, windowStart, windowEnd);
@@ -131,7 +134,7 @@ export function BulgeStructureOverview({ bulges, windowStart, windowEnd, focused
               {bandWidth >= 38 && <text x={x + bandWidth / 2} y={y + 10}>{`B${bulgeIndex + 1}${zone.effect === "increase" ? "↑" : "↓"}`}</text>}
             </g>;
           })}
-          {bulge.effectZones.length === 0 && <text className="bulge-overview-no-zone" x={trackStart + 8} y={y + 10}>No mapped core zone</text>}
+          {bulge.effectZones.length === 0 && <text className="bulge-overview-no-zone" x={trackStart + 8} y={y + 10}>{bulge.effectSupport === "unsupported" ? "Unknown effect" : "No mapped core zone"}</text>}
         </g>;
       })}
 
@@ -165,8 +168,8 @@ export function BulgeStructureOverview({ bulges, windowStart, windowEnd, focused
     {bulges.length > 0 && <div className="bulge-overview-items">
       {bulges.map((bulge, bulgeIndex) => <div className={`${bulge.type} ${bulge.source} ${getBulgeFocusClass(bulge.id, focusedBulgeId)}`} key={bulge.id}>
         <i>{`B${bulgeIndex + 1}`}</i>
-        <strong>{bulge.type === "deletion" ? "Deletion" : "Mismatch"} · {bulge.size} nt</strong>
-        <span>{formatCoordinate(bulge.start)}–{formatCoordinate(bulge.end)}</span>
+        <strong>{bulge.type === "deletion" ? "Deletion" : bulge.type === "insertion" ? "Insertion" : "Mismatch"} · {bulge.size} nt</strong>
+        <span>{l(bulge.type === "insertion" ? "Insertion boundary" : "NP position")} {formatCoordinate(intervalToProtocolPosition(bulge))}{bulge.type !== "insertion" && <> · {l("Target interval")} {formatCoordinate(bulge.start)}–{formatCoordinate(bulge.end)}</>}</span>
         <small>{bulge.id === "placement-preview" ? l("Placement preview") : bulge.source === "initial" ? <><LockKeyhole size={10} />{l("Starting arRNA")}</> : l("Added optimization")}</small>
         {bulge.effectZones.length > 0 && <div className="bulge-overview-effect-ranges">
           {bulge.effectZones.map((zone, index) => {

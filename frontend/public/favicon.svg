@@ -1,4 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#0d739f"/>
-  <path d="M21 15h8v27h16v7H21z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 68" fill="none">
+  <title>LEAPER</title>
+  <defs>
+    <mask id="back" maskUnits="userSpaceOnUse" x="0" y="0" width="68" height="68">
+      <path fill="#fff" d="M0 0h68v68H0z"/>
+      <path d="m18 29.333 8 18.667m16-18.667 8 18.667" stroke="#000" stroke-width="8"/>
+    </mask>
+    <mask id="front" maskUnits="userSpaceOnUse" x="0" y="0" width="68" height="68">
+      <path fill="#fff" d="M0 0h68v68H0z"/>
+      <path d="m30 20 8 18.667" stroke="#000" stroke-width="8"/>
+    </mask>
+  </defs>
+  <g stroke="#c48288" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 20 12 28 12-28 12 28 12-28" mask="url(#back)"/>
+    <path d="m14 20 12 28 12-28 12 28 12-28" mask="url(#front)"/>
+  </g>
 </svg>

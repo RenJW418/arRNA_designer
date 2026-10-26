@@ -29,6 +29,19 @@ describe("normal-editing API contract", () => {
     );
   });
 
+  it("sends the chosen protocol window and optional internal structure", () => {
+    const request = createNormalEditingRequest("C".repeat(68) + "A" + "C".repeat(57), 69, "ADAR1", null, {
+      windowStartRelative: -68,
+      windowEndRelative: 57,
+      includeInternalBulge: true,
+      codingContext: false,
+    });
+    assert.equal(request.window_start_relative, -68);
+    assert.equal(request.window_end_relative, 57);
+    assert.equal(request.include_internal_bulge, true);
+    assert.equal(request.coding_context, false);
+  });
+
   it("uses concise fallbacks and hides transport details", () => {
     assert.equal(
       normalizeApiError(null),

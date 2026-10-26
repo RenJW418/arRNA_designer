@@ -1,0 +1,159 @@
+/* Exon-specific layout; the shared result theme supplies the cards and exports.
+   Keep selectors stronger than the legacy stylesheet and its compact grids. */
+.sf-inline-results .normal-tool-result.exon-tool-result {
+  --exon-ese-fill: #eee7f3;
+  --exon-ese-line: #b79cc5;
+  min-width: 0;
+  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker,
+.sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker.has-custom-candidate,
+.sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker:has(> .normal-candidate-card:only-child),
+.sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker:has(> .normal-candidate-card:last-child:nth-child(2)) {
+  display: grid;
+  grid-template-columns: repeat(var(--exon-candidate-columns, 4), minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+}
+
+.sf-inline-results .normal-tool-result.exon-tool-result :is(.exon-primary-panel, .exon-result-layout, .exon-candidate-sidebar, .exon-result-main, .exon-selected-panel) {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-layout { display: block; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-primary-panel { overflow: visible; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-selected-panel { gap: 0; }
+
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-notices {
+  display: grid;
+  gap: 0;
+  margin: 0 0 18px;
+  padding: 0 13px;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: var(--ui-soft);
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px 0;
+  color: var(--ui-muted);
+  font: 13px/1.5 Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-notice + .exon-result-notice { border-top: 1px solid var(--ui-line); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-notice > svg { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 2px; color: var(--ui-gold); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-result-notice p { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+
+/* One horizontal scroller keeps the full context and the selected duplex aligned.
+   Only SVGs have a minimum width; legends wrap within the visible card width. */
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel { min-width: 0; max-width: 100%; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-scroll {
+  min-width: 0;
+  max-width: 100%;
+  padding: 17px 22px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: inherit;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-line-strong) transparent;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result :is(.exon-context-overview, .exon-pairing-overview) {
+  width: 100%;
+  min-width: 0;
+  max-width: 1000px;
+  margin-inline: auto;
+  background: transparent;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-overview { margin-bottom: 9px; padding-bottom: 11px; border-bottom: 1px solid var(--ui-line); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-pairing-overview .normal-schematic-scroll {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-track, .exon-pairing-svg) {
+  display: block;
+  width: 100%;
+  min-width: 740px;
+  max-width: 1000px;
+  height: auto;
+  margin-inline: auto;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-backbone { fill: none; stroke: var(--ui-line-strong); stroke-width: 2; stroke-linecap: round; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-exon { fill: var(--ui-soft); stroke: var(--ui-line-strong); stroke-width: 1; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-coverage { fill: var(--ui-gold); stroke: none; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-ese { fill: var(--exon-ese-fill); stroke: var(--exon-ese-line); stroke-width: .8; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-boundary { fill: none; stroke: var(--ui-line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-label { fill: var(--ui-muted); font-size: 11px; font-weight: 500; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-endpoint { fill: var(--ui-muted); font-size: 10px; font-weight: 400; }
+
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-schematic-ese-region { fill: var(--exon-ese-fill); stroke: none; rx: 4px; ry: 4px; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-schematic-splice-boundary { fill: none; stroke: var(--ui-line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-schematic-splice-label { fill: var(--ui-muted); font-size: 10px; font-weight: 500; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-key, .normal-schematic-legend) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 16px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 7px 0 13px;
+  border: 0;
+  color: var(--ui-muted);
+  font: 12px/1.5 Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-context-key { padding: 2px 0 0; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-key, .normal-schematic-legend) > span { display: inline-flex; align-items: center; gap: 7px; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-coverage-swatch, .exon-ese-swatch, .exon-mismatch-swatch) { display: inline-block; flex: 0 0 auto; width: 12px; height: 7px; border: 0; border-radius: 3px; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-coverage-swatch { height: 4px; background: var(--ui-gold); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-ese-swatch { border: 1px solid var(--exon-ese-line); background: var(--exon-ese-fill); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-mismatch-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--ui-accent); }
+
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-empty-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--ui-line);
+  border-radius: 15px;
+  background: var(--ui-soft);
+  color: var(--ui-muted);
+  font: 14px/1.6 Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-empty-result p { flex: 1 1 240px; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-empty-result .button { min-height: 40px; padding: 10px 16px; font-size: 13px; }
+
+@container candidate-results (max-width: 1060px) {
+  .sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker { --exon-candidate-columns: 2; }
+}
+@container candidate-results (max-width: 800px) {
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-track, .exon-pairing-svg) { min-width: 960px; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-label, .exon-context-endpoint, .exon-schematic-splice-label) { font-size: 14px; }
+}
+@container candidate-results (max-width: 530px) {
+  .sf-inline-results .normal-tool-result.exon-tool-result .normal-candidate-picker { --exon-candidate-columns: 1; gap: 8px; }
+}
+@media (max-width: 640px) {
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-scroll { padding: 12px 12px 0; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-empty-result { padding: 16px; }
+}
+@media (forced-colors: active) {
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-exon, .exon-context-ese, .exon-schematic-ese-region, .exon-ese-swatch) { fill: Canvas; stroke: CanvasText; border-color: CanvasText; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-context-coverage { fill: Highlight; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-backbone, .exon-context-boundary, .exon-schematic-splice-boundary) { stroke: CanvasText; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-label, .exon-context-endpoint, .exon-schematic-splice-label) { fill: CanvasText; }
+  .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-coverage-swatch, .exon-mismatch-swatch) { background: CanvasText; }
+}

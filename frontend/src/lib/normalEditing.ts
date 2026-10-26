@@ -1,4 +1,4 @@
-export type EditingCategory = "blocked_ga" | "synonymous" | "editable";
+export type EditingCategory = "blocked_ga" | "synonymous" | "editable" | "rna";
 
 export interface EditingSite {
   position: number;
@@ -22,7 +22,15 @@ export interface InitialArrnaDesign {
 }
 
 export type AdarEnvironment = "ADAR1" | "ADAR2";
-export type NormalArrnaVariantId = "baseline" | "downstream-del10" | "upstream-del28" | "dual-deletion";
+/** Unified design profile; the individual names remain readable in archived results. */
+export type NormalDesignEnvironment = AdarEnvironment | "combined";
+
+export function pairingCoverage(environment: NormalDesignEnvironment) {
+  // The combined profile uses the outer boundaries of both reference regions.
+  return { upstream: environment === "ADAR1" ? 4 : 6, downstream: environment === "ADAR2" ? 11 : 25 };
+}
+type InitialVariantId = "baseline" | "downstream-del10" | "upstream-del28" | "dual-deletion";
+export type NormalArrnaVariantId = InitialVariantId | `${InitialVariantId}-internal-del1`;
 
 export interface NormalArrnaVariant {
   id: NormalArrnaVariantId;
@@ -64,11 +72,12 @@ export function translateCodon(codon: string): string {
   return CODON_TABLE[codon] ?? "?";
 }
 
-export function classifyEditingSites(sequence: string): EditingSite[] {
-  if (!sequence || sequence.length % 3 !== 0 || /[^ACGT]/.test(sequence)) return [];
+export function classifyEditingSites(sequence: string, codingContext = true): EditingSite[] {
+  if (!sequence || (codingContext && sequence.length % 3 !== 0) || /[^ACGT]/.test(sequence)) return [];
 
   return sequence.split("").flatMap((base, index) => {
     if (base !== "A") return [];
+    if (!codingContext) return [{ position: index + 1, codon: "", editedCodon: "", aminoAcid: "", editedAminoAcid: "", category: "rna" as EditingCategory }];
     const codonStart = Math.floor(index / 3) * 3;
     const codon = sequence.slice(codonStart, codonStart + 3);
     const offset = index - codonStart;
@@ -105,12 +114,16 @@ export function designInitialArrna(
   sequence: string,
   targetPosition: number,
   flankLength = 75,
+  options: { windowStartRelative?: number; windowEndRelative?: number } = {},
 ): InitialArrnaDesign | null {
   const targetIndex = targetPosition - 1;
   if (targetIndex < 0 || targetIndex >= sequence.length || sequence[targetIndex] !== "A") return null;
 
-  const windowStartIndex = Math.max(0, targetIndex - flankLength);
-  const windowEndIndex = Math.min(sequence.length, targetIndex + flankLength + 1);
+  const startRelative = options.windowStartRelative ?? -flankLength;
+  const endRelative = options.windowEndRelative ?? flankLength;
+  if (!Number.isInteger(startRelative) || !Number.isInteger(endRelative) || startRelative > 0 || endRelative < 0) return null;
+  const windowStartIndex = Math.max(0, targetIndex + startRelative);
+  const windowEndIndex = Math.min(sequence.length, targetIndex + endRelative + 1);
   const targetWindow = sequence.slice(windowStartIndex, windowEndIndex);
   const upstreamLength = targetIndex - windowStartIndex;
   const downstreamLength = windowEndIndex - targetIndex - 1;
@@ -128,22 +141,21 @@ export function designInitialArrna(
     targetIndex: targetIndexInWindow,
     upstreamLength,
     downstreamLength,
-    hasFullFlanks: upstreamLength === flankLength && downstreamLength === flankLength,
+    hasFullFlanks: upstreamLength === -startRelative && downstreamLength === endRelative,
   };
 }
 
 export function validateAdarPairing(
   design: InitialArrnaDesign,
-  environment: AdarEnvironment,
+  environment: NormalDesignEnvironment,
 ): PairingValidation {
-  const requiredDownstream = environment === "ADAR1" ? 4 : 6;
-  const requiredUpstream = environment === "ADAR1" ? 20 : 11;
+  const { downstream: requiredDownstream, upstream: requiredUpstream } = pairingCoverage(environment);
   const problems: string[] = [];
   if (design.downstreamLength < requiredDownstream) {
-    problems.push(`arRNA 5′ side requires ${requiredDownstream} paired nt, but only ${design.downstreamLength} nt are available`);
+    problems.push(`Target downstream coverage requires ${requiredDownstream} nt, but only ${design.downstreamLength} nt are available`);
   }
   if (design.upstreamLength < requiredUpstream) {
-    problems.push(`arRNA 3′ side requires ${requiredUpstream} paired nt, but only ${design.upstreamLength} nt are available`);
+    problems.push(`Target upstream coverage requires ${requiredUpstream} nt, but only ${design.upstreamLength} nt are available`);
   }
   return {
     valid: problems.length === 0,
@@ -174,7 +186,8 @@ function createDeletionVariant(
   return { id, label, shortLabel, description, arrnaSequence, alignedGuide, deletionCoordinates };
 }
 
-export function designNormalArrnaVariants(design: InitialArrnaDesign): NormalArrnaVariant[] {
+export function designNormalArrnaVariants(design: InitialArrnaDesign, includeInternalBulge = false, environment: NormalDesignEnvironment = "combined"): NormalArrnaVariant[] {
+  if (!validateAdarPairing(design, environment).valid) return [];
   const variants: NormalArrnaVariant[] = [createDeletionVariant(
     design,
     "baseline",
@@ -186,27 +199,27 @@ export function designNormalArrnaVariants(design: InitialArrnaDesign): NormalArr
   const downstreamDeletion = Array.from({ length: 10 }, (_, index) => 34 + index);
   const upstreamDeletion = Array.from({ length: 28 }, (_, index) => -31 - index);
 
-  if (design.downstreamLength >= 75) {
+  if (design.downstreamLength >= 53) {
     variants.push(createDeletionVariant(
       design,
       "downstream-del10",
       "Downstream +34 deletion arRNA",
       "+34 deletion 10",
-      "Deletes the 10 arRNA bases aligned to A+34–A+43; 32 distal paired nt remain.",
+      "Deletes the 10 arRNA bases aligned to A+34–A+43; at least 10 distal paired nt remain.",
       downstreamDeletion,
     ));
   }
-  if (design.upstreamLength >= 75) {
+  if (design.upstreamLength >= 68) {
     variants.push(createDeletionVariant(
       design,
       "upstream-del28",
       "Upstream −31 deletion arRNA",
       "−31 deletion 28",
-      "Deletes the 28 arRNA bases aligned to A−31–A−58; 17 distal paired nt remain.",
+      "Deletes the 28 arRNA bases aligned to A−31–A−58; at least 10 distal paired nt remain.",
       upstreamDeletion,
     ));
   }
-  if (design.downstreamLength >= 75 && design.upstreamLength >= 75) {
+  if (design.downstreamLength >= 53 && design.upstreamLength >= 68) {
     variants.push(createDeletionVariant(
       design,
       "dual-deletion",
@@ -215,6 +228,18 @@ export function designNormalArrnaVariants(design: InitialArrnaDesign): NormalArr
       "Combines A+34 deletion 10 and A−31 deletion 28.",
       [...downstreamDeletion, ...upstreamDeletion],
     ));
+  }
+  if (includeInternalBulge) {
+    for (const variant of [...variants]) {
+      variants.push(createDeletionVariant(
+        design,
+        `${variant.id}-internal-del1` as NormalArrnaVariantId,
+        `${variant.label} with +4 internal deletion`,
+        `${variant.shortLabel}; +4 deletion 1`,
+        "Optional 1/0 internal bulge at +4; test target and bystander editing experimentally.",
+        [...variant.deletionCoordinates, 4],
+      ));
+    }
   }
   return variants;
 }

@@ -1,0 +1,16 @@
+{
+  "targetSequence": "TGTCTTCGCGGTCCGCTCCCCTTGTGTCGCCTTGGTCTGTTCTGGCGGGTCCCTGCCGTTGCTTCGTGTGTGTGTATCGGGGGTGATCTCCTGGTCCGGGTTGTGTTGGTTGGGTCTCGTGCTCCGTCTTGGTTTCTGTCCTGTGGGTCCGTC",
+  "arrnaSequence": "CGGACCCACAGGACAGAAACCAAGACGGAGCACGAGACCCAACCAACACAACCCGGACCAGGAGAUCACCCCCGACACACACACACGAAGCAACGGCAGGGACCCGCCAGAACAGACCAAGGCGACACAAGGGGAGCGGACCGCGAAGACA",
+  "targetAPosition": 76,
+  "environment": "ADAR1",
+  "source": "external",
+  "label": "Synthetic refinement tutorial \u00b7 illustrative measurements",
+  "measurement_kind": "illustrative_not_experimental",
+  "illustrative_measurements": {
+    "76": 42
+  },
+  "unmeasured_positions": [
+    86
+  ],
+  "description": "Synthetic two-A teaching example. Enter 42% at A0 only to explore the workflow; this number is not an experimental result."
+}

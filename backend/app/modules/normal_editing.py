@@ -7,6 +7,7 @@ from app.schemas.design import (
     NormalEditingResult,
     NormalizedSequenceInput,
     PairingRequirements,
+    RuleCitation,
     RuleSetInfo,
 )
 
@@ -32,7 +33,11 @@ CODON_TABLE: dict[str, str] = {
 ENGINE = EngineInfo(name="leaper-arrna-engine", version="0.2.0")
 NORMAL_RULESET = RuleSetInfo(
     id="leaper-normal-editing",
-    version="0.1.0",
+    version="0.3.0",
+    citations=[RuleCitation(
+        label="LEAPER 3.0: RNA structure programs endogenous ADAR for precise and efficient editing",
+        doi="10.1016/j.cell.2026.04.047",
+    )],
 )
 
 
@@ -40,7 +45,9 @@ def reverse_complement_rna(sequence: str) -> str:
     return sequence.translate(str.maketrans("ACGT", "UGCA"))[::-1]
 
 
-def _editing_site(sequence: str, target_position: int) -> EditingSiteResult:
+def _editing_site(sequence: str, target_position: int, coding_context: bool = True) -> EditingSiteResult:
+    if not coding_context:
+        return EditingSiteResult(position=target_position, codon="", edited_codon="", amino_acid="", edited_amino_acid="", category="rna")
     target_index = target_position - 1
     codon_start = (target_index // 3) * 3
     codon = sequence[codon_start:codon_start + 3]
@@ -96,12 +103,11 @@ def _candidate(
 
 def design_normal_editing(
     payload: NormalEditingRequest,
-    flank_length: int = 75,
 ) -> NormalEditingResult:
     sequence = payload.sequence
     target_index = payload.target_position - 1
-    start_index = max(0, target_index - flank_length)
-    end_index = min(len(sequence), target_index + flank_length + 1)
+    start_index = max(0, target_index + payload.window_start_relative)
+    end_index = min(len(sequence), target_index + payload.window_end_relative + 1)
     target_window = sequence[start_index:end_index]
     target_index_in_window = target_index - start_index
     upstream_length = target_index_in_window
@@ -125,7 +131,7 @@ def design_normal_editing(
     )]
     downstream_deletion = list(range(34, 44))
     upstream_deletion = list(range(-31, -59, -1))
-    if downstream_length >= flank_length:
+    if downstream_length >= 53:
         candidates.append(_candidate(
             baseline_arrna,
             target_index_in_window,
@@ -135,7 +141,7 @@ def design_normal_editing(
             "Deletes arRNA bases aligned to target coordinates A+34 through A+43.",
             downstream_deletion,
         ))
-    if upstream_length >= flank_length:
+    if upstream_length >= 68:
         candidates.append(_candidate(
             baseline_arrna,
             target_index_in_window,
@@ -145,7 +151,7 @@ def design_normal_editing(
             "Deletes arRNA bases aligned to target coordinates A-31 through A-58.",
             upstream_deletion,
         ))
-    if downstream_length >= flank_length and upstream_length >= flank_length:
+    if downstream_length >= 53 and upstream_length >= 68:
         candidates.append(_candidate(
             baseline_arrna,
             target_index_in_window,
@@ -156,42 +162,70 @@ def design_normal_editing(
             [*downstream_deletion, *upstream_deletion],
         ))
 
-    required_downstream = 4 if payload.adar_environment == "ADAR1" else 6
-    required_upstream = 20 if payload.adar_environment == "ADAR1" else 11
+    # Software coverage policy: conservatively combine both existing binding
+    # envelopes. This combined threshold is not a separately validated paper result.
+    required_downstream = 25
+    required_upstream = 6
     problems: list[str] = []
     if downstream_length < required_downstream:
         problems.append(
-            f"arRNA 5' side requires {required_downstream} paired nt; "
+            f"Target downstream coverage requires {required_downstream} nt; "
             f"only {downstream_length} are available"
         )
     if upstream_length < required_upstream:
         problems.append(
-            f"arRNA 3' side requires {required_upstream} paired nt; "
+            f"Target upstream coverage requires {required_upstream} nt; "
             f"only {upstream_length} are available"
         )
-    warnings = [] if upstream_length == flank_length and downstream_length == flank_length else [
-        "The target does not have the complete 75-nt context on both sides."
-    ]
+    warnings: list[str] = []
+    full_requested_window = (
+        upstream_length == -payload.window_start_relative
+        and downstream_length == payload.window_end_relative
+    )
+    if not full_requested_window:
+        warnings.append("The requested target window was clipped to the available sequence.")
     if problems:
         warnings.append("; ".join(problems))
+        candidates = []
+    else:
+        if downstream_length < 53:
+            warnings.append("Downstream external deletion requires target coverage through +53 to retain 10 complementary flanking nt.")
+        if upstream_length < 68:
+            warnings.append("Upstream external deletion requires target coverage through -68 to retain 10 complementary flanking nt.")
+        if payload.include_internal_bulge:
+            for candidate in list(candidates):
+                candidates.append(_candidate(
+                    baseline_arrna,
+                    target_index_in_window,
+                    f"{candidate.id}-internal-del1",
+                    f"{candidate.label} with +4 internal deletion",
+                    f"{candidate.short_label}; +4 deletion 1",
+                    "Adds an optional 1/0 internal bulge at +4; test target and bystander editing experimentally.",
+                    [*candidate.deletion_coordinates, 4],
+                ))
+
 
     return NormalEditingResult(
         normalized_input=NormalizedSequenceInput(
             sequence=sequence,
             length=len(sequence),
             target_position=payload.target_position,
+            window_start_relative=payload.window_start_relative,
+            window_end_relative=payload.window_end_relative,
+            include_internal_bulge=payload.include_internal_bulge,
+            coding_context=payload.coding_context,
         ),
         reference=payload.reference,
-        editing_site=_editing_site(sequence, payload.target_position),
+        editing_site=_editing_site(sequence, payload.target_position, payload.coding_context),
         target_window=target_window,
         window_start=start_index + 1,
         window_end=end_index,
         target_index=target_index_in_window,
         upstream_length=upstream_length,
         downstream_length=downstream_length,
-        has_full_flanks=upstream_length == flank_length and downstream_length == flank_length,
+        has_full_flanks=full_requested_window,
         pairing=PairingRequirements(
-            adar_environment=payload.adar_environment,
+            adar_environment="combined",
             required_upstream=required_upstream,
             required_downstream=required_downstream,
             is_satisfied=not problems,

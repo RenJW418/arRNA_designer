@@ -1,0 +1,21 @@
+# Separate optional project. Do NOT merge this into docker-compose.prod.yml.
+# Merely preparing/validating this file does not deploy or issue certificates.
+services:
+  https-edge:
+    image: ${LEAPER_CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    environment:
+      LEAPER_DOMAIN: ${LEAPER_DOMAIN:?Set the owner-confirmed public DNS hostname}
+      LEAPER_HTTPS_UPSTREAM: ${LEAPER_HTTPS_UPSTREAM:?Set a reviewed HTTP upstream reachable from this container}
+    ports:
+      - "80:80"
+      - "443:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./deploy/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - https_caddy_data:/data
+      - https_caddy_config:/config
+volumes:
+  https_caddy_data:
+  https_caddy_config:

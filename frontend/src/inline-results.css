@@ -1,0 +1,21 @@
+.sequence-first-workspace.has-result .sf-entry {
+  margin: 0 auto;
+}
+
+.sf-inline-results {
+  width: 100%;
+  max-width: var(--sf-content-width);
+  margin: 28px auto 0;
+  scroll-margin-top: 24px;
+  outline: none;
+  animation: sf-results-enter 240ms ease-out;
+}
+
+@keyframes sf-results-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-inline-results { animation: none; }
+}

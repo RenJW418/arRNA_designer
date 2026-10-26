@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="24 24 428 124" fill="none">
+  <title>LEAPER interwoven W mark</title>
+  <defs>
+    <mask id="back" maskUnits="userSpaceOnUse" x="24" y="24" width="428" height="124">
+      <path fill="#fff" d="M24 24h428v124H24z"/>
+      <path d="m140 86 28 28m140-28 28 28" stroke="#000" stroke-width="30"/>
+    </mask>
+    <mask id="front" maskUnits="userSpaceOnUse" x="24" y="24" width="428" height="124">
+      <path fill="#fff" d="M24 24h428v124H24z"/>
+      <path d="m224 58 28 28" stroke="#000" stroke-width="30"/>
+    </mask>
+  </defs>
+  <g stroke="#c48288" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m42 44 84 84 84-84 84 84 84-84" mask="url(#back)"/>
+    <path d="m98 44 84 84 84-84 84 84 84-84" mask="url(#front)"/>
+  </g>
+</svg>

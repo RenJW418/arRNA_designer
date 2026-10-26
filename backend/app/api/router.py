@@ -3,6 +3,12 @@ from fastapi import APIRouter, HTTPException, status
 from app.modules.exon_skipping import design_exon_skipping
 from app.modules.ncbi import NcbiLookupError, resolve_ncbi_coding_sequence, resolve_ncbi_exon
 from app.modules.normal_editing import design_normal_editing
+from app.modules.rna_structure import (
+    RnaFoldCalculationError,
+    RnaFoldUnavailableError,
+    fold_rna,
+)
+from app.modules.sequence_analysis import annotate_sequence
 from app.schemas.design import NormalEditingRequest, NormalEditingResult
 from app.schemas.exon_skipping import (
     ExonSkippingDesignRequest,
@@ -12,11 +18,32 @@ from app.schemas.exon_skipping import (
     NcbiExonRequest,
     NcbiExonResponse,
 )
+from app.schemas.sequence_analysis import (
+    AnnotationRequest,
+    AnnotationResponse,
+    RnaFoldRequest,
+    RnaFoldResponse,
+)
 from app.schemas.task import TaskCreate, TaskCreated
 from app.services.analysis import AnalysisNotImplementedError, PlaceholderAnalysisEngine
 
 api_router = APIRouter()
 engine = PlaceholderAnalysisEngine()
+
+
+@api_router.post("/analysis/annotations", response_model=AnnotationResponse, tags=["analysis"])
+def analyze_annotations(payload: AnnotationRequest) -> AnnotationResponse:
+    return annotate_sequence(payload)
+
+
+@api_router.post("/analysis/rnafold", response_model=RnaFoldResponse, tags=["analysis"])
+def analyze_rna_structure(payload: RnaFoldRequest) -> RnaFoldResponse:
+    try:
+        return fold_rna(payload)
+    except RnaFoldUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RnaFoldCalculationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @api_router.post(
@@ -38,7 +65,10 @@ def create_normal_editing_design(payload: NormalEditingRequest) -> NormalEditing
 def create_exon_skipping_design(
     payload: ExonSkippingDesignRequest,
 ) -> ExonSkippingDesignResponse:
-    return design_exon_skipping(payload)
+    try:
+        return design_exon_skipping(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @api_router.post(

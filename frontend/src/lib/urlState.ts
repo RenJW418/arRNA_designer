@@ -2,9 +2,9 @@
 //
 // Everything needed to restore a view is encoded into the URL fragment. A
 // fragment is never transmitted in an HTTP request, so a shared link carries a
-// user's sequence to whoever opens it while the server never sees it and
-// nothing lands in an access log. That keeps the promise that nothing a user
-// submits is retained, and makes it true by construction rather than by policy.
+// user's sequence to whoever opens it without putting the fragment in HTTP
+// request URLs. Generating a design still submits the sequence to the API in
+// its request body; fragment encoding does not establish a retention policy.
 
 export type SharedView = "home" | "design" | "refine" | "help" | "method" | "citation";
 export type SharedMode = "sequence" | "gene";
@@ -22,6 +22,13 @@ export interface SharedDesignInput {
   downstreamIntron?: string;
   exonNumber?: string;
   arrnaLength?: string;
+  windowStart?: string;
+  windowEnd?: string;
+  includeInternalBulge?: boolean;
+  codingContext?: boolean;
+  evaluateCoveredEse?: boolean;
+  eseMismatchPositions?: string;
+  transcriptAccession?: string;
 }
 
 export interface SharedState {
@@ -100,4 +107,52 @@ export function decodeState(hash: string): SharedState | null {
   } catch {
     return null;
   }
+}
+
+// The three static pages are routed by path so they can be bookmarked, cited
+// and opened directly. Home and design keep living in the `#s=` fragment, which
+// the browser never sends to the server, so a shared sequence still never
+// reaches a request URL or an access log. A static page carries no sequence, so
+// its path is safe to put in a citation.
+export type StaticView = "help" | "method" | "citation";
+
+// The refinement module was removed; old refinement links still land on a
+// usable page, so the app-level view never includes "refine".
+export type View = Exclude<SharedView, "refine">;
+
+const STATIC_PATHS: Record<string, StaticView> = {
+  "/help": "help",
+  "/citation": "citation",
+  "/method": "method",
+};
+
+export function staticViewFromPath(pathname: string): StaticView | null {
+  // A citation or bookmark may carry a trailing slash or any casing; both are
+  // normalized so the link still opens the intended page. An empty path falls
+  // back to "/" (home), which is not a static page.
+  const normalized = pathname.replace(/\/+$/, "").toLowerCase() || "/";
+  return STATIC_PATHS[normalized] ?? null;
+}
+
+// A static path must not drag a design out of the fragment: on /help,
+// /method or /citation the fragment belongs to a different page, so it is
+// ignored when initializing the design state. Everywhere else the `#s=`
+// fragment is the single source of restorable state.
+export function restoredStateFor(pathname: string, hash: string): SharedState | null {
+  if (staticViewFromPath(pathname)) return null;
+  return decodeState(hash);
+}
+
+export function pathForView(view: SharedView): string {
+  return view === "help" || view === "method" || view === "citation" ? `/${view}` : "/";
+}
+
+// Paths win over the fragment: a static path opens its page even when a stale
+// `#s=` fragment names a different view. Otherwise an old shared link's
+// fragment restores the view, and anything unrecognized lands on home.
+export function resolveView(pathname: string, hash: string): View {
+  const staticView = staticViewFromPath(pathname);
+  if (staticView) return staticView;
+  const view = decodeState(hash)?.view;
+  return !view || view === "refine" ? "home" : view;
 }
