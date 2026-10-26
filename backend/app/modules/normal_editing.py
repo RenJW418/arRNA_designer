@@ -34,6 +34,7 @@ ENGINE = EngineInfo(name="leaper-arrna-engine", version="0.2.0")
 NORMAL_RULESET = RuleSetInfo(
     id="leaper-normal-editing",
     version="0.3.0",
+    status="published",
     citations=[RuleCitation(
         label="LEAPER 3.0: RNA structure programs endogenous ADAR for precise and efficient editing",
         doi="10.1016/j.cell.2026.04.047",

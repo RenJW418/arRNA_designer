@@ -2385,6 +2385,25 @@ html[lang="zh-CN"] body { font-family: Arial, "PingFang SC", "Microsoft YaHei", 
 .citation-list article a { display: inline-flex; gap: 6px; align-items: center; color: var(--accent); font-size: 11px; }
 .citation-contact { max-width: 1120px; display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; padding: 16px 18px; border-left: 4px solid var(--green); background: var(--surface); font-size: 12px; }
 .citation-contact a { color: var(--accent); }
+.citation-server { max-width: 1120px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.citation-server > h2 { margin: 0 0 10px; font-size: 24px; }
+.citation-server > p { max-width: 850px; margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.citation-server-entry { max-width: 850px; border: 1px solid var(--line); background: var(--surface); }
+.citation-server-entry dl { display: grid; margin: 0; }
+.citation-server-entry dl > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--line); }
+.citation-server-entry dl > div:last-child { border-bottom: 0; }
+.citation-server-entry dt { color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.citation-server-entry dd { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.55; }
+.citation-server-entry dd .citation-pending { margin-left: 8px; color: var(--muted); }
+.citation-copy { max-width: 850px; margin-top: 22px; }
+.citation-copy-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.citation-copy-head h3 { margin: 0; font-size: 15px; }
+.citation-copy-head .button { min-height: 34px; padding: 5px 12px; font-size: 12px; }
+.citation-copy pre { overflow: auto; margin: 0; padding: 16px 18px; border: 1px solid var(--line); background: #f3f0e8; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+@media (max-width: 820px) {
+  .citation-server-entry dl > div { grid-template-columns: 1fr; gap: 2px 0; }
+}
+
 
 .task-page-heading { max-width: 900px; margin: 28px 0 24px; }
 .task-page-heading h1 { font: 700 clamp(36px, 4vw, 54px)/1.05 Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }

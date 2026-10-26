@@ -2,13 +2,23 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { serializeCsv, serializeFasta, serializeJson, type DesignExportBundle } from "./exports.ts";
+import { getBulgeCoreProvenance } from "./bulgeOptimization.ts";
 
 const bundle: DesignExportBundle = {
   schema_version: "1.0",
   application: "normal_editing",
   generated_at: "2026-08-27T00:00:00.000Z",
   normalized_input: { sequence: "AAACCC", target_position: 1 },
-  provenance: { engine: { name: "test", version: "1" }, ruleset: { id: "r", version: "1", citations: [] } },
+  provenance: {
+    engine: { name: "test", version: "1" },
+    ruleset: {
+      id: "r",
+      version: "1",
+      status: "published",
+      citations: [{ label: "LEAPER 3.0: RNA structure programs endogenous ADAR for precise and efficient editing", doi: "10.1016/j.cell.2026.04.047" }],
+    },
+  },
+  bulge_provenance: getBulgeCoreProvenance(),
   candidates: [{ id: "baseline", label: "Baseline", sequence: "GGGUUC", length: 6 }],
   evidence: {
     observed_editing_efficiencies: { 1: 42 },
@@ -28,6 +38,19 @@ describe("reproducible exports", () => {
 
   it("keeps the full normalized raw input in JSON", () => {
     assert.equal(JSON.parse(serializeJson(bundle)).normalized_input.sequence, "AAACCC");
+  });
+
+  it("exposes ruleset status and citation DOI in the exported JSON", () => {
+    const parsed = JSON.parse(serializeJson(bundle));
+    assert.equal(parsed.provenance.ruleset.status, "published");
+    assert.equal(parsed.provenance.ruleset.citations[0].doi, "10.1016/j.cell.2026.04.047");
+  });
+
+  it("carries bulge effect-zone provenance in the exported JSON", () => {
+    const parsed = JSON.parse(serializeJson(bundle));
+    assert.equal(parsed.bulge_provenance.profileCount, 120);
+    assert.equal(parsed.bulge_provenance.primarySource.doi, "10.1016/j.cell.2026.04.047");
+    assert.match(parsed.bulge_provenance.thresholdNature, /not an experimental significance threshold/);
   });
 });
 
@@ -53,4 +76,7 @@ it("retains the complete exon reference, prediction settings and candidate coord
   assert.deepEqual(parsed.ese_hits, result.ese_hits);
   assert.equal(parsed.candidates[0].global_start, 3);
   assert.equal(parsed.candidates[0].target_sequence, "ACA");
+  assert.equal(parsed.bulge_provenance.profileCount, 120);
+  assert.equal(parsed.bulge_provenance.primarySource.doi, "10.1016/j.cell.2026.04.047");
+  assert.match(parsed.bulge_provenance.thresholdNature, /not an experimental significance threshold/);
 });

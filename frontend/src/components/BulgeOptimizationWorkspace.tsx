@@ -27,6 +27,8 @@ import {
   removeRemovableBulge,
   evaluateQualitativeEffect,
   getBulgeCandidates,
+  getBulgeCoreProvenance,
+  getCoreEffectThresholds,
   OptimizationEvidenceState,
   type OptimizationGoal,
   validateBulgePlacement,
@@ -174,7 +176,9 @@ export function BulgeOptimizationWorkspace({
   initialBulges: suppliedInitialBulges,
   onReviewSource,
 }: Props) {
-  const { l } = useLanguage();
+  const { l, t } = useLanguage();
+  const bulgeThresholds = getCoreEffectThresholds();
+  const bulgeProvenance = getBulgeCoreProvenance();
   const cloneStartingBulges = () => (suppliedInitialBulges
     ?? createInitialBulges(variant.deletionCoordinates, environment))
     .map((bulge) => new Bulge({ ...bulge }));
@@ -591,7 +595,17 @@ export function BulgeOptimizationWorkspace({
           <CandidateGroup type="insertion" candidates={candidates.insertion} disabled={remainingBulges <= 0} selectedId={selectedCandidateId} expandedRangeId={effectRangeCandidateId} onSelect={selectCandidate} onViewRange={(candidate) => setEffectRangeCandidateId((current) => current === candidate.id ? null : candidate.id)} onDragStart={onCandidateDragStart} />
           <CandidateGroup type="mismatch" candidates={candidates.mismatch} disabled={remainingBulges <= 0} selectedId={selectedCandidateId} expandedRangeId={effectRangeCandidateId} onSelect={selectCandidate} onViewRange={(candidate) => setEffectRangeCandidateId((current) => current === candidate.id ? null : candidate.id)} onDragStart={onCandidateDragStart} />
           {effectRangeCandidate && <BulgeEffectRangeDetails candidate={effectRangeCandidate} environment={environment} onClose={() => setEffectRangeCandidateId(null)} />}
-          <p className="bulge-provisional-note"><strong>{environment} · {l("core strong-effect zones")}</strong><InfoTip>{l("Expected arrows are shown only where the experimental smoothed fold-change is at least 1.2 or at most 0.8.")}</InfoTip></p>
+          <p className="bulge-provisional-note"><strong>{environment} · {l("core strong-effect zones")}</strong><InfoTip>{t("bulge.evidence.threshold", { increase: bulgeThresholds.increase, decrease: bulgeThresholds.decrease })}</InfoTip></p>
+          <details className="simple-disclosure bulge-evidence-note">
+            <summary>{t("bulge.evidence.disclosure")}</summary>
+            <ul className="bulge-evidence-list">
+              <li>{t("bulge.evidence.source", { citation: bulgeProvenance.primarySource.citation })}</li>
+              <li>{t("bulge.evidence.scale", { profiles: bulgeProvenance.profileCount, sizeRange: bulgeProvenance.sizeRange, environments: bulgeProvenance.adarEnvironments.join(" / ") })}</li>
+              <li>{t("bulge.evidence.method", { response: bulgeProvenance.response, window: `${bulgeProvenance.analysisWindow[0]}…+${bulgeProvenance.analysisWindow[1]} nt`, minRunLength: bulgeProvenance.minRunLength })}</li>
+              <li>{t("bulge.evidence.thresholdNature")}</li>
+              <li>{t("bulge.evidence.effectNature")}</li>
+            </ul>
+          </details>
         </aside>}
 
         <div className="bulge-editor">

@@ -12,6 +12,8 @@ class RuleSetInfo(BaseModel):
     id: str
     version: str
     citations: list[RuleCitation] = Field(default_factory=list)
+    # Whether the ruleset's evidence has been peer-reviewed and published.
+    status: Literal["published", "provisional", "unpublished-protocol"] = "unpublished-protocol"
 
 
 class EngineInfo(BaseModel):

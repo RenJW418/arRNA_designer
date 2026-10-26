@@ -1,4 +1,6 @@
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
+import { useRef, useState } from "react";
+import { BUILD_VERSION } from "../lib/buildInfo";
 import { useLanguage } from "./LanguageProvider";
 
 interface Props { onBack: () => void; }
@@ -10,11 +12,108 @@ const REFERENCES = [
   { label: "Exon skipping", citation: "Guo W. et al. Long-term reversal of Duchenne muscular dystrophy via circular arRNA-guided exon skipping in monkeys and humans. Cell (2026).", doi: "10.1016/j.cell.2026.05.030" },
 ];
 
+// How to cite this server. The DOI and the public HTTPS domain are not
+// available yet, so both stay null and the page renders an explicit "pending"
+// notice instead of a fake value or a blank. Fill in `doi` and `url` once they
+// exist and the structured entry, the copyable citation and the BibTeX below
+// all update from this single place — no other change is required. Do not put
+// a temporary address or a made-up DOI here.
+const SERVER_CITATION = {
+  // The full author list is still AUTHOR_INPUT_NEEDED in the manuscript, so
+  // the page reuses the maintainer's name already shown below and marks the
+  // complete list as pending. Replace `author` when the list is finalized.
+  author: "Ren Jiwu",
+  title: "LEAPER arRNA Designer",
+  serverName: "LEAPER arRNA Designer web server",
+  version: BUILD_VERSION,
+  doi: null as string | null, // DOI pending — set upon release archiving.
+  url: null as string | null, // Public HTTPS domain pending — set once decided.
+  accessYear: new Date().getFullYear(),
+};
+
+function buildPlainCitation(): string {
+  const { author, title, version, serverName, doi, url, accessYear } = SERVER_CITATION;
+  let text = `${author}. ${title}, version ${version}. ${serverName}. Accessed ${accessYear}.`;
+  if (doi) text += ` doi: ${doi}.`;
+  if (url) text += ` Available at: ${url}.`;
+  return text;
+}
+
+function buildBibTeX(): string {
+  const { author, title, version, serverName, doi, url, accessYear } = SERVER_CITATION;
+  const fields = [
+    `author = {${author}}`,
+    `title = {${title}}`,
+    `howpublished = {${serverName}, version ${version}}`,
+    `year = {${accessYear}}`,
+    `note = {Accessed ${accessYear}}`,
+  ];
+  if (doi) fields.push(`doi = {${doi}}`);
+  if (url) fields.push(`url = {${url}}`);
+  return `@misc{leaper-arrna-designer,\n  ${fields.join(",\n  ")}\n}`;
+}
+
+function CopyableCitation({ label, text }: { label: string; text: string }) {
+  const { l } = useLanguage();
+  const [copied, setCopied] = useState(false);
+  const codeRef = useRef<HTMLElement | null>(null);
+
+  async function copy() {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+      return;
+    }
+    // Clipboard failed (or is unavailable). Select the text so it can still be
+    // copied by hand.
+    const node = codeRef.current;
+    if (node) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  }
+
+  return <div className="citation-copy">
+    <div className="citation-copy-head">
+      <h3>{label}</h3>
+      <button className="button button-secondary" type="button" onClick={copy}>{copied ? <Check size={15} /> : <Copy size={15} />}{l(copied ? "Copied" : "Copy")}</button>
+    </div>
+    <pre><code ref={codeRef}>{text}</code></pre>
+  </div>;
+}
+
 export function CitationPage({ onBack }: Props) {
   const { l, language } = useLanguage();
   return <section className="citation-page">
     <button className="back-button" type="button" onClick={onBack}><ArrowLeft size={16} />{l("Back to overview")}</button>
     <header><p className="eyebrow">LEAPER arRNA Designer</p><h1>{l("Citation")}</h1><p>{language === "en" ? "When using this tool, please cite LEAPER 3.0, the Nature Protocols protocol and the NAR web server article. Publication details for the latter two will be added here." : "使用本工具时，请引用 LEAPER 3.0、Nature Protocols 方法文章及 NAR 网站文章。后两篇的正式引用信息将补充在此处。"}</p></header>
+    <section className="citation-server">
+      <h2>{l("How to cite this server")}</h2>
+      <p>{l("Cite the server itself with the entry below. The DOI and the public HTTPS address are not available yet, so they are shown as pending rather than as placeholder values.")}</p>
+      <div className="citation-server-entry">
+        <dl>
+          <div><dt>{l("Authors")}</dt><dd>{SERVER_CITATION.author}<span className="citation-pending">{l("Complete author list pending manuscript finalization.")}</span></dd></div>
+          <div><dt>{l("Title")}</dt><dd>{SERVER_CITATION.title}</dd></div>
+          <div><dt>{l("Server name")}</dt><dd>{SERVER_CITATION.serverName}</dd></div>
+          <div><dt>{l("Version")}</dt><dd>{SERVER_CITATION.version}</dd></div>
+          <div><dt>{l("Access year")}</dt><dd>{SERVER_CITATION.accessYear}</dd></div>
+          <div><dt>DOI</dt><dd>{SERVER_CITATION.doi ?? l("DOI pending — to be added upon release archiving.")}</dd></div>
+          <div><dt>URL</dt><dd>{SERVER_CITATION.url ?? l("Public HTTPS domain pending — to be added once the domain is decided.")}</dd></div>
+        </dl>
+      </div>
+      <CopyableCitation label={l("Plain text citation")} text={buildPlainCitation()} />
+      <CopyableCitation label="BibTeX" text={buildBibTeX()} />
+    </section>
     <div className="citation-list">
       {REFERENCES.filter((reference) => reference.label === "LEAPER 3.0").map((reference) => <article key={reference.doi}><span>{reference.label}</span><p>{reference.citation}</p><a href={`https://doi.org/${reference.doi}`} target="_blank" rel="noreferrer">DOI: {reference.doi}<ExternalLink size={13} /></a></article>)}
       <article><span>Nature Protocols</span><p>{language === "en" ? "LEAPER 3.0 experimental protocol · citation details pending." : "LEAPER 3.0 实验 Protocol · 正式引用信息待补充。"}</p></article>

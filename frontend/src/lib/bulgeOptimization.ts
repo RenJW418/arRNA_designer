@@ -279,11 +279,58 @@ export function createEffectZoneOverviewGeometry(
   };
 }
 
+interface CoreEffectThresholds {
+  increase: string;
+  decrease: string;
+}
+
+export interface BulgeCoreProvenance {
+  primarySource: {
+    citation: string;
+    title: string;
+    journal: string;
+    year: number;
+    doi: string;
+    project: string;
+  };
+  dataset: string;
+  adarEnvironments: string[];
+  bulgeTypes: Record<string, string>;
+  sizeRange: string;
+  profileCount: number;
+  response: string;
+  analysisWindow: number[];
+  minRunLength: number;
+  censoredAtBoundary: boolean;
+  censoredAtBoundaryMeaning: string;
+  thresholdNature: string;
+  effectNature: string;
+  multiBulgeCaveat: string;
+  derivedBy: string;
+  methodsRecord: string;
+  sourceLimitations: string[];
+  unresolved: string[];
+}
+
 interface CoreEffectZoneDataset {
+  version: number;
+  coordinate: string;
+  thresholds: CoreEffectThresholds;
+  provenance: BulgeCoreProvenance;
   zones: Record<AdarEnvironment, Partial<Record<BulgeType, Record<string, RelativeEffectZone[]>>>>;
 }
 
 const CORE_EFFECT_ZONE_DATA = coreEffectZoneData as CoreEffectZoneDataset;
+
+/** Core-zone screening thresholds, read from bulgeCoreEffectZones.json. */
+export function getCoreEffectThresholds(): CoreEffectThresholds {
+  return { ...CORE_EFFECT_ZONE_DATA.thresholds };
+}
+
+/** Evidence provenance for the bulge core-effect zones. */
+export function getBulgeCoreProvenance(): BulgeCoreProvenance {
+  return CORE_EFFECT_ZONE_DATA.provenance;
+}
 
 /** Select the source dataset by the structure's position relative to target A0. */
 export function bulgeEvidenceEnvironment(environment: NormalDesignEnvironment, start: number): AdarEnvironment {

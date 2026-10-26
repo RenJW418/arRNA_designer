@@ -12,6 +12,7 @@ export interface DesignProvenance {
     id: string;
     version: string;
     citations: RuleCitation[];
+    status: "published" | "provisional" | "unpublished-protocol";
   };
 }
 

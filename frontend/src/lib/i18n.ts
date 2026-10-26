@@ -98,6 +98,13 @@ const EN = {
   "method.stage4Version": "Exon skipping",
   "method.stage4Title": "Splicing modulation",
   "method.stage4Body": "Circular arRNAs target the splice acceptor or ESE regions; evaluate editing and exon skipping experimentally.",
+  "bulge.evidence.threshold": "Expected arrows are shown only where the experimental smoothed fold-change is {{increase}} (increase) or {{decrease}} (decrease).",
+  "bulge.evidence.disclosure": "Evidence and provenance",
+  "bulge.evidence.source": "Core effect zones derive from single-bulge sliding experiments: {{citation}} (DOI 10.1016/j.cell.2026.04.047).",
+  "bulge.evidence.scale": "{{profiles}} profiles spanning {{sizeRange}}, one set for each environment ({{environments}}).",
+  "bulge.evidence.method": "Response metric {{response}}, analysis window {{window}}, stable intervals of at least {{minRunLength}} consecutive positions.",
+  "bulge.evidence.thresholdNature": "The 20% core cutoff is an analysis rule for effect strength, not an experimental significance threshold.",
+  "bulge.evidence.effectNature": "Effect zones are qualitative directions, not predicted numerical editing efficiencies.",
 } as const;
 
 export type TranslationKey = keyof typeof EN;
@@ -195,6 +202,13 @@ const ZH: Record<TranslationKey, string> = {
   "method.stage4Version": "Exon skipping",
   "method.stage4Title": "剪接调控",
   "method.stage4Body": "环状 arRNA 靶向 splice acceptor 或 ESE 区域；编辑与 exon skipping 需分别实验验证。",
+  "bulge.evidence.threshold": "仅当实验平滑后 fold-change 达到 {{increase}}（升高）或 {{decrease}}（降低）时才显示预期方向箭头。",
+  "bulge.evidence.disclosure": "证据与数据来源",
+  "bulge.evidence.source": "核心效应区间来自单 bulge 滑动实验：{{citation}}（DOI 10.1016/j.cell.2026.04.047）。",
+  "bulge.evidence.scale": "共 {{profiles}} 条 profile，尺寸 {{sizeRange}}，{{environments}} 各一套。",
+  "bulge.evidence.method": "响应指标为 {{response}}，分析窗口 {{window}}，稳定区间需至少 {{minRunLength}} 个连续位置。",
+  "bulge.evidence.thresholdNature": "20% 的 core cutoff 是效应强度的分析规则，不是实验显著性阈值。",
+  "bulge.evidence.effectNature": "效应区间表示定性方向，不是预测的数值编辑效率。",
 };
 
 const DICTIONARIES: Record<Language, Record<string, string>> = {
@@ -258,7 +272,7 @@ const ZH_TEXT: Record<string, string> = {
   "Exon skipping result": "Exon skipping 结果", "Choose a candidate on the pre-mRNA map, then copy or export its sequence.": "在 pre-mRNA 图上选择候选设计，然后复制或导出其序列。", "Candidates": "候选数", "Requested length": "设定长度", "Target exon": "目标 exon", "Design context": "设计背景", "SA describes the splice acceptor. ESE regions are merged above-threshold enhancer motifs used to place coverage candidates.": "SA 表示 splice acceptor；ESE 区域由超过阈值的 enhancer motif 合并得到，用于放置覆盖候选设计。", "Canonical AG": "经典 AG", "Non-canonical SA": "非经典 SA", "Choose a candidate": "选择候选设计", "SA and ESE coverage map": "SA 与 ESE 覆盖图", "local context": "局部背景", "SA A–C candidate": "SA A–C 候选设计", "Merged ESE high-score region": "合并的 ESE 高分区域", "Perfect-match ESE candidate": "完全匹配 ESE 候选设计", "A–C mismatch candidate": "A–C mismatch 候选设计", "Perfect-match candidate": "完全匹配候选设计", "Local coordinates": "局部坐标", "Exon coverage": "exon 覆盖", "ESE A covered": "覆盖的 ESE A", "Mismatch coordinate": "Mismatch 坐标", "SA A–C mismatch": "SA A–C mismatch", "ESE perfect complement": "ESE 完全互补", "No arRNA candidate was generated. Revise the input sequence or design length.": "未生成 arRNA 候选设计。请修改输入序列或设计长度。", "Open these panels only for nucleotide-level inspection or method documentation.": "仅在需要逐碱基检查或方法记录时展开以下面板。",
   "Data and method provenance": "数据与方法来源", "Data & method provenance": "数据与方法来源", "References for this design": "本设计的参考来源", "Sequence source": "序列来源", "NCBI reference sequence": "NCBI 参考序列", "User-supplied sequence": "用户提供的序列", "Transcript metadata and genomic exon coordinates were resolved with NCBI Datasets; the sequence was retrieved from NCBI Nucleotide using EFetch.": "Transcript 信息与基因组 exon 坐标由 NCBI Datasets 解析；序列通过 EFetch 从 NCBI Nucleotide 获取。", "The intron–exon–intron sequence was supplied directly and was not resolved through NCBI.": "intron–exon–intron 序列由用户直接提供，未经 NCBI 解析。", "ESE scoring method": "ESE 评分方法", "Local scoring uses the five published ESEfinder matrices and their official thresholds. The workflow retains motifs containing A and merges overlapping hits into design regions.": "局部评分采用已发表的五个 ESEfinder matrix 及其官方阈值。工作流程保留含 A 的 motif，并将重叠 hit 合并为设计区域。", "Base-pairing view": "碱基配对视图", "arRNA is aligned 3′→5′; export remains 5′→3′": "arRNA 按 3′→5′ 对齐；导出序列仍为 5′→3′", "Intron": "Intron", "ESE-region A": "ESE 区域 A", "Upstream intron does not end in canonical AG; no SA candidate was generated.": "上游 intron 未以经典 AG 结尾，因此未生成 SA candidate。", "No above-threshold ESEfinder motif containing A was found in the target exon.": "目标 exon 中未发现超过阈值且含 A 的 ESEfinder motif。", "JSON includes normalized input, all candidates, the selected design, warnings, provenance and any recorded experimental evidence.": "JSON 包含标准化 input、全部 candidate、selected design、warning、provenance，以及已录入的 experimental evidence。",
   "Experiment-guided refinement": "实验反馈驱动优化", "Optimize a tested arRNA": "优化已实验验证的 arRNA", "bulges used": "个 bulge 已使用", "Experimental starting point": "实验起始版本", "All observations and added bulges in this session belong to this locked arRNA.": "本次操作中的所有观测值和新增 bulge 均属于这条已锁定的 arRNA。", "Select the exact generated arRNA used in the experiment, then lock it before entering observations.": "请选择实验中实际使用的 arRNA 版本，并在录入观测值前将其锁定。", "Use this tested arRNA": "使用这条已验证 arRNA", "Start over from": "从此版本重新开始", "Source fixed": "起始版本已固定", "First identify the tested arRNA.": "请先确定实验使用的 arRNA。", "Choose a generated version above and lock it as the source.": "在上方选择已生成的版本，并将其锁定为起始版本。",
-  "Bulge candidate library": "Bulge 候选库", "Drag a candidate onto the arRNA, or select it and click its starting base.": "将候选结构拖到 arRNA 上，或先选择结构再点击起始碱基。", "Deletion bulges": "Deletion bulge", "Mismatch bulges": "Mismatch bulge", "A deletion bulge removes aligned bases from the arRNA.": "Deletion bulge 会从 arRNA 中删除对齐的碱基。", "A mismatch bulge replaces every base in the selected interval with a non-complementary RNA base.": "Mismatch bulge 会将所选区间内每个 arRNA 碱基替换为非互补 RNA 碱基。", "A mismatch bulge uses consecutive same-base mismatches: A-A, C-C, G-G or T-T (U-U in RNA output).": "Mismatch bulge 使用连续同碱基错配：A-A、C-C、G-G 或 T-T（RNA 输出中为 U-U）。", "Draft": "暂定", "Draft candidate list": "暂定候选列表", "The displayed sizes are provisional interaction scaffolding. Final candidate lists and qualitative effect zones will come from the experimental rule set.": "当前尺寸仅用于交互原型；最终候选列表和定性作用范围将由实验规则集确定。", "core strong-effect zones": "核心强效区", "Expected arrows are shown only where the experimental smoothed fold-change is at least 1.2 or at most 0.8.": "仅在实验 smoothed fold-change ≥1.2 或 ≤0.8 的位置显示预期方向箭头。", "View effect range": "查看 effect range", "Hide effect range": "收起 effect range", "Relative to bulge start": "相对于 bulge 起点", "No core strong-effect zone is mapped for this candidate.": "该候选目前没有映射的核心强效区。",
+  "Bulge candidate library": "Bulge 候选库", "Drag a candidate onto the arRNA, or select it and click its starting base.": "将候选结构拖到 arRNA 上，或先选择结构再点击起始碱基。", "Deletion bulges": "Deletion bulge", "Mismatch bulges": "Mismatch bulge", "A deletion bulge removes aligned bases from the arRNA.": "Deletion bulge 会从 arRNA 中删除对齐的碱基。", "A mismatch bulge replaces every base in the selected interval with a non-complementary RNA base.": "Mismatch bulge 会将所选区间内每个 arRNA 碱基替换为非互补 RNA 碱基。", "A mismatch bulge uses consecutive same-base mismatches: A-A, C-C, G-G or T-T (U-U in RNA output).": "Mismatch bulge 使用连续同碱基错配：A-A、C-C、G-G 或 T-T（RNA 输出中为 U-U）。", "Draft": "暂定", "Draft candidate list": "暂定候选列表", "The displayed sizes are provisional interaction scaffolding. Final candidate lists and qualitative effect zones will come from the experimental rule set.": "当前尺寸仅用于交互原型；最终候选列表和定性作用范围将由实验规则集确定。", "core strong-effect zones": "核心强效区", "View effect range": "查看 effect range", "Hide effect range": "收起 effect range", "Relative to bulge start": "相对于 bulge 起点", "No core strong-effect zone is mapped for this candidate.": "该候选目前没有映射的核心强效区。",
   "Place and measure": "放置结构并录入测量值", "The complete sequence is shown in 30 nt rows. Enter observed editing efficiency directly beneath each A.": "完整序列按每行 30 nt 展示；请直接在每个 A 下方填写实测编辑效率。", "Evidence": "证据", "Observed": "实测", "Expected": "预期", "Blue fill is the observed experimental editing efficiency entered by the user. Arrows show only the qualitative expected direction from a bulge rule and never alter the measured percentage.": "蓝色填充表示用户录入的实验编辑效率。箭头只表示 bulge 规则的定性预期方向，不会改变实测百分比。", "editing %": "编辑 %", "Pairing": "配对", "expected increase": "预期升高", "expected decrease": "预期降低", "overlapping qualitative effects": "定性作用范围重叠",
   "Current bulge stack": "当前 bulge 组合", "A design may contain up to 4 bulges, including starting structures. Occupied arRNA intervals cannot overlap.": "一个设计最多包含 4 个 bulge（包括起始结构），占用的 arRNA 区间不得重叠。", "This starting arRNA has no deletion bulges.": "该起始 arRNA 不含 deletion bulge。", "starting arRNA": "起始 arRNA", "added optimization": "新增优化", "Edit bases": "修改碱基", "Aligned mismatch bases": "对齐的 mismatch 碱基", "positions must remain non-complementary to the target.": "个位点必须始终与靶序列不互补。", "positions must remain same-base mismatches with the target.": "个位点必须与对齐的 target 碱基形成 same-base mismatch。", "Mismatch bases must form same-base mismatches with the aligned target bases.": "每个 mismatch 碱基必须与对齐的 target 碱基形成 same-base mismatch。", "Apply": "应用", "Current optimized arRNA": "当前优化后的 arRNA", "derived only from": "仅由以下版本生成：",
   "The bulge extends beyond this arRNA.": "该 bulge 超出此 arRNA 范围。", "This bulge cannot be placed here.": "该 bulge 不能放置在这里。", "Bulge position and size must be positive-integer sequence coordinates.": "bulge 位置与大小必须为正整数序列坐标。", "A bulge structure cannot cover the target A0. Place it entirely upstream or downstream.": "bulge 结构不能覆盖目标 A0，请完整放置在其上游或下游。", "This placement puts A0 in a core-decrease range and may reduce target A editing.": "此放置会使 A0 落入 core-decrease 区间，可能降低目标 A 的编辑效率。", "This interval overlaps an existing bulge.": "该区间与已有 bulge 重叠。", "Whole-arRNA structure overview": "完整 arRNA 结构概览", "Structural positions update immediately after placement.": "放置后结构位置会立即更新。", "Starting arRNA": "起始 arRNA", "No structural bulges in the selected starting arRNA": "所选起始 arRNA 中没有结构性 bulge", "Placement preview": "放置预览", "Added optimization": "新增优化",
@@ -314,7 +328,6 @@ Object.assign(ZH_TEXT, {
   "Exon skipping": "Exon skipping",
   "Exons are classified as < x/2, x/2–x, or > x.": "Exon 按 < x/2、x/2–x、> x 分类。",
   "Expected": "预期",
-  "Expected arrows are shown only where the experimental smoothed fold-change is at least 1.2 or at most 0.8.": "仅当实验平滑后 fold change ≥ 1.2 或 ≤ 0.8 时才显示预期箭头。",
   "Experimental starting point": "实验起始版本",
   "First identify the tested arRNA.": "请先确定实验使用的 arRNA。",
   "Full base-by-base pairing": "逐碱基完整配对",
@@ -692,6 +705,20 @@ Object.assign(ZH_TEXT, {
   "Insertion bulges": "Insertion bulge",
   "Insert arRNA bases before the selected target coordinate. Effects are unknown.": "在选定 target 坐标之前插入 arRNA 碱基；效应未知。",
   "Automatic rules cover same-base mismatches. Manual A/G and other non-complementary mismatches have unknown effects.": "自动规则涵盖 same-base mismatch；手动 A/G 及其他非互补 mismatch 的效应未知。",
+});
+
+Object.assign(ZH_TEXT, {
+  "How to cite this server": "如何引用本服务器",
+  "Cite the server itself with the entry below. The DOI and the public HTTPS address are not available yet, so they are shown as pending rather than as placeholder values.": "请用下面的条目引用本服务器。DOI 与公开 HTTPS 地址尚未确定，因此以「待补充」标注，而不是占位假值。",
+  "Authors": "作者",
+  "Title": "题名",
+  "Server name": "服务器名称",
+  "Version": "版本",
+  "Access year": "访问年份",
+  "Plain text citation": "纯文本引用",
+  "DOI pending — to be added upon release archiving.": "DOI 待补充——发布存档后填写。",
+  "Public HTTPS domain pending — to be added once the domain is decided.": "公开 HTTPS 域名待补充——域名确定后填写。",
+  "Complete author list pending manuscript finalization.": "完整作者名单待论文定稿。",
 });
 
 export function normalizeLanguage(value: string | null | undefined): Language {

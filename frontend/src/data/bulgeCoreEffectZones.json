@@ -5,6 +5,45 @@
     "increase": ">=1.2",
     "decrease": "<=0.8"
   },
+  "provenance": {
+    "primarySource": {
+      "citation": "Song et al., Cell (2026), \"RNA structure programs endogenous ADAR for precise and efficient editing\"",
+      "title": "RNA structure programs endogenous ADAR for precise and efficient editing",
+      "journal": "Cell",
+      "year": 2026,
+      "doi": "10.1016/j.cell.2026.04.047",
+      "project": "LEAPER 3.0"
+    },
+    "dataset": "Single-bulge sliding experiments from LEAPER 3.0 (Song et al., Cell 2026).",
+    "adarEnvironments": ["ADAR1", "ADAR2"],
+    "bulgeTypes": {
+      "sameBaseMismatch": "Same-base mismatch (N/N): every aligned base pair in the tract is A-A, C-C, G-G, or T-T (U-U in RNA output).",
+      "arRnaDeletion": "arRNA deletion (N/0): a continuous deletion on the arRNA that leaves the aligned target-RNA tract unpaired."
+    },
+    "sizeRange": "1-30 nt",
+    "profileCount": 120,
+    "response": "smoothed5",
+    "analysisWindow": [-50, 50],
+    "minRunLength": 3,
+    "censoredAtBoundary": true,
+    "censoredAtBoundaryMeaning": "Intervals touching the -50 or +50 analysis-window boundary are marked censored because the effect may extend beyond the plotted window.",
+    "thresholdNature": "The 20% core cutoffs (smoothed fold-change >= 1.20 for increase, <= 0.80 for decrease) are an additional analysis rule for effect strength, not an experimental significance threshold.",
+    "effectNature": "Effect zones are qualitative directions, not predicted numerical editing efficiencies.",
+    "multiBulgeCaveat": "Multi-bulge ranking is an experimental heuristic constructed from single-bulge evidence and requires separate validation.",
+    "derivedBy": "NAR/bulge/extract_bulge_effects.py",
+    "methodsRecord": "NAR/bulge/derived/README.md",
+    "sourceLimitations": [
+      "ADAR1 includes L1_DMIPC_split.csv, but no equivalent raw ADAR2 table is present. ADAR2 can therefore be extracted from the supplied processed CSVs but cannot be independently reconstructed from raw measurements in this folder.",
+      "ADAR1/foldchange_del1.pdf duplicates the deletion summary chart rather than the expected 1/0 profile. The derived result uses the corresponding CSV.",
+      "Some PDF peak annotations select the positive-distance enhancement lobe rather than the global maximum of the supplied smoothed CSV profile. The derived files report the actual maximum and minimum within -50 to +50 and retain the full curve.",
+      "The source column name Distance_from_mistmatch contains a spelling error; it is preserved only when reading the original files."
+    ],
+    "unresolved": [
+      "Source smoothing remains unresolved; how smoothed5 was calculated and how its boundaries were handled still require verification.",
+      "Whether biological replicates were aggregated before or after smoothing still requires verification.",
+      "The source convention for position 0 and the construct-level correspondence used for multi-nucleotide misN and delN profiles still require verification."
+    ]
+  },
   "zones": {
     "ADAR1": {
       "mismatch": {

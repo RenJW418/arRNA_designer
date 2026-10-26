@@ -3,14 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import ceil
 
-from app.schemas.design import DesignProvenance, EngineInfo, RuleSetInfo
+from app.schemas.design import DesignProvenance, EngineInfo, RuleCitation, RuleSetInfo
 from app.schemas.exon_skipping import (
     ArrnaCandidate,
-    ExonDesignSettings,
-    EsePredictionSettings,
-    EseMatrixSetting,
     EseHit,
+    EseMatrixSetting,
+    EsePredictionSettings,
     EseRegion,
+    ExonDesignSettings,
     ExonSkippingDesignRequest,
     ExonSkippingDesignResponse,
     ExonSkippingNormalizedInput,
@@ -62,6 +62,11 @@ EXON_SKIPPING_PROVENANCE = DesignProvenance(
     ruleset=RuleSetInfo(
         id="leaper-exon-skipping",
         version="0.2.0",
+        status="provisional",
+        citations=[RuleCitation(
+            label="Long-term reversal of Duchenne muscular dystrophy via circular arRNA-guided exon skipping in monkeys and humans",
+            doi="10.1016/j.cell.2026.05.030",
+        )],
     ),
 )
 

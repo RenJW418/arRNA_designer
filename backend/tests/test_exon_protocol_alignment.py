@@ -1,7 +1,8 @@
 import pytest
 from pydantic import ValidationError
+
 from app.modules.exon_skipping import design_exon_skipping
-from app.modules.ncbi import _get_gene_product, NcbiLookupError
+from app.modules.ncbi import NcbiLookupError, _get_gene_product
 from app.schemas.exon_skipping import ExonSkippingDesignRequest
 
 
