@@ -53,6 +53,7 @@ const info = resolveBuildInfo(
 );
 
 export const BUILD_VERSION: string = info.versionLabel;
+export const BUILD_VERSION_PLAIN: string = info.version;
 export const BUILD_COMMIT: string = info.commit;
 export const BUILD_COMMIT_SHORT: string = info.commitShort;
 export const COMMIT_URL: string | null = info.commitUrl;

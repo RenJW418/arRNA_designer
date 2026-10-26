@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
 import { useRef, useState } from "react";
-import { BUILD_VERSION } from "../lib/buildInfo";
+import { BUILD_VERSION_PLAIN } from "../lib/buildInfo";
 import { useLanguage } from "./LanguageProvider";
 
 interface Props { onBack: () => void; }
@@ -25,7 +25,7 @@ const SERVER_CITATION = {
   author: "Ren Jiwu",
   title: "LEAPER arRNA Designer",
   serverName: "LEAPER arRNA Designer web server",
-  version: BUILD_VERSION,
+  version: BUILD_VERSION_PLAIN,
   doi: null as string | null, // DOI pending — set upon release archiving.
   url: null as string | null, // Public HTTPS domain pending — set once decided.
   accessYear: new Date().getFullYear(),
