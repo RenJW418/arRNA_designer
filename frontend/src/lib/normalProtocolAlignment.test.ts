@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { designInitialArrna, designNormalArrnaVariants, validateAdarPairing } from './normalEditing.ts';
+import { designInitialArrna, designNormalArrnaVariants, selectDefaultNormalVariant, validateAdarPairing } from './normalEditing.ts';
 
 test('normal helper accepts protocol target-axis coverage rather than the reverse strand', () => {
   const design = designInitialArrna('CCCCA'+'C'.repeat(25),5)!;
@@ -11,9 +11,27 @@ test('normal helper accepts protocol target-axis coverage rather than the revers
 });
 test('normal helper generates shorter legal external designs and preserves ten nt flank', () => {
   const design = designInitialArrna('C'.repeat(68)+'A'+'C'.repeat(54),69)!;
-  assert.equal(designNormalArrnaVariants(design).length,4);
+  assert.equal(designNormalArrnaVariants(design, false).length,4);
   const shorter = designInitialArrna('C'.repeat(67)+'A'+'C'.repeat(52),68)!;
-  assert.equal(designNormalArrnaVariants(shorter).length,1);
+  assert.equal(designNormalArrnaVariants(shorter, false).length,1);
+});
+test('default selection shows the three-bulge design only when all three bulges fit', () => {
+  for (const [upstream, downstream, expectedId, expectedLength] of [
+    [75, 75, 'dual-deletion-internal-del1', 112],
+    [30, 75, 'baseline', 106],
+    [75, 30, 'baseline', 106],
+    [30, 30, 'baseline', 61],
+  ] as const) {
+    const design = designInitialArrna('C'.repeat(upstream) + 'A' + 'C'.repeat(downstream), upstream + 1)!;
+    const variants = designNormalArrnaVariants(design);
+    const selected = selectDefaultNormalVariant(variants)!;
+    assert.equal(selected.id, expectedId);
+    assert.equal(selected.arrnaSequence.length, expectedLength);
+    assert.equal(selected.alignedGuide[upstream], 'C');
+    assert.equal(selected.alignedGuide[upstream + 4], expectedId === 'baseline' ? 'G' : '-');
+    const control = selectDefaultNormalVariant(variants, false)!;
+    assert.ok(!control.deletionCoordinates.includes(4));
+  }
 });
 test('normal helper supports shifted windows and the optional +4 internal deletion', () => {
   const design = designInitialArrna('C'.repeat(120)+'A'+'C'.repeat(122),121,75,{windowStartRelative:-30,windowEndRelative:100})!;

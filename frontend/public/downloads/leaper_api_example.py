@@ -20,7 +20,7 @@ NORMAL_INPUT = {
     "sequence": "GACCTCTCCGGGGTCACAGAGGAGGCACCCCTGAAGCTCTCCAAGGCCGTGCATAAGGCTGTGCTGACCATCGACAAGAAAGGGACTGAAGCTGCTGGGGCCATGTTTTTAGAGGCCATACCCATGTCTATCCCCCCCGAGGTCAAGTTCAAC",
     "target_position": 76, "adar_environment": "combined",
     "window_start_relative": -75, "window_end_relative": 75,
-    "include_internal_bulge": False, "coding_context": True,
+    "include_internal_bulge": True, "coding_context": True,
 }
 EXON_INPUT = {
     "upstream_intron": "T" * 150 + "AG", "exon": "CACACGA" * 8,

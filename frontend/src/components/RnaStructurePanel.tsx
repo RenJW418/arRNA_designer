@@ -3,6 +3,7 @@ import { parseDotBracketPairs, structureBounds, type RnaTopology } from "../lib/
 import { useLanguage } from "./LanguageProvider";
 import { useRnaFold } from "../lib/useRnaFold";
 import { probabilityColor } from "../lib/rnaFoldDisplay";
+import { RECOMMENDED_DESIGN_SETTINGS } from "../lib/designDefaults";
 import "../sequence-analysis.css";
 import "../rna-fold.css";
 
@@ -31,7 +32,7 @@ export function RnaStructurePanel({ sequence, label, topology: appliedTopology, 
   const topologyId = useId();
   const baseDetailId = useId();
   const diagramTitleId = useId();
-  const [selectedTopology, setTopology] = useState<RnaTopology>("linear");
+  const [selectedTopology, setTopology] = useState<RnaTopology>(RECOMMENDED_DESIGN_SETTINGS.foldTopology);
   const topology = appliedTopology ?? selectedTopology;
   const fold = useRnaFold(sequence, topology, autoCalculate);
   const { result, error, inputKey } = fold;
@@ -89,26 +90,26 @@ export function RnaStructurePanel({ sequence, label, topology: appliedTopology, 
         }}>
           <title id={diagramTitleId}>{tr("RNAfold MFE structure; bases are colored by unpaired probability", "RNAfold 最小自由能结构；碱基颜色表示未配对概率")}</title>
           <rect x={geometry.bounds.x} y={geometry.bounds.y} width={geometry.bounds.width} height={geometry.bounds.height} fill="#fcfbf8" />
-          <g stroke="#c8c4bc" strokeWidth="1.5" fill="none">
+          <g stroke="#1d6c9b" strokeWidth="1.5" fill="none">
             <polyline points={result.coordinates.map(point => `${point.x},${point.y}`).join(" ")} />
             {result.topology === "circular" && <line x1={result.coordinates.at(-1)!.x} y1={result.coordinates.at(-1)!.y} x2={result.coordinates[0].x} y2={result.coordinates[0].y} strokeDasharray="3 2" />}
           </g>
           <g stroke="#8c929e" strokeWidth="1" fill="none">{geometry.pairs.map(pair => <line key={`${pair.i}-${pair.j}`} x1={result.coordinates[pair.i - 1].x} y1={result.coordinates[pair.i - 1].y} x2={result.coordinates[pair.j - 1].x} y2={result.coordinates[pair.j - 1].y} />)}</g>
           <g>{result.coordinates.map((point, index) => <g key={index} transform={`translate(${point.x} ${point.y})`} onMouseEnter={() => setActiveBase(index + 1)} onClick={() => setActiveBase(index + 1)} style={{ cursor: "pointer" }}>
             <title>{index + 1} {result.sequence[index]} · {tr("Unpaired probability", "未配对概率")} {percentage(result.unpaired_probabilities[index])}</title>
-            <circle r="6.2" fill={probabilityColor(result.unpaired_probabilities[index])} stroke={activeBase === index + 1 ? "#282d31" : "#fcfbf8"} strokeWidth={activeBase === index + 1 ? 2 : 0.65} />
-            <text textAnchor="middle" dominantBaseline="central" fontSize="6.6" fontFamily="Arial, sans-serif" fill="#25313b" pointerEvents="none">{result.sequence[index]}</text>
+            <circle r="6.2" fill="#ffffff" stroke={activeBase === index + 1 ? "#1d6c9b" : probabilityColor(result.unpaired_probabilities[index])} strokeWidth={activeBase === index + 1 ? 2.6 : 1.8} />
+            <text textAnchor="middle" dominantBaseline="central" fontSize="6.6" fontFamily="Arial, sans-serif" fill="#1d6c9b" pointerEvents="none">{result.sequence[index]}</text>
             {(index === 0 || index === result.sequence.length - 1) && <text y="-11" textAnchor="middle" fontSize="7" fontFamily="Arial, sans-serif" fill="#5e6366" pointerEvents="none">{result.topology === "linear" ? (index === 0 ? "5′ · 1" : `3′ · ${index + 1}`) : index + 1}</text>}
           </g>)}</g>
         </svg>
       </div>
-      <div className="sa-structure-legend"><span>{tr("Unpaired probability", "未配对概率")}</span><span>0</span><span className="sa-probability-gradient" aria-hidden="true" /><span>1</span><span className="sa-legend-pair">— {tr("MFE pair", "MFE 配对")}</span></div>
+      <div className="sa-structure-legend"><span>{tr("Unpaired probability", "未配对概率")}</span><span>0</span><span className="sa-probability-gradient" aria-hidden="true" style={{ background: `linear-gradient(90deg, ${probabilityColor(0)}, ${probabilityColor(1)})` }} /><span>1</span><span className="sa-legend-pair">— {tr("MFE pair", "MFE 配对")}</span></div>
       <div id={baseDetailId} className="sa-base-detail" aria-live="polite">{activeBase ? <><strong>{activeBase} · {result.sequence[activeBase - 1]}</strong><span>{tr("Unpaired probability", "未配对概率")} {percentage(result.unpaired_probabilities[activeBase - 1])}</span><span>{partner ? `${tr("MFE partner", "MFE 配对位置")} ${partner}` : tr("Unpaired in MFE structure", "MFE 结构中未配对")}</span></> : tr("Select a base to inspect its probability and MFE pairing.", "选择碱基以查看其未配对概率与 MFE 配对信息。")}</div>
       <div className="sa-export-actions"><button type="button" onClick={() => downloadFile(JSON.stringify(result, null, 2), "application/json", `arrna-rnafold-${result.topology}.json`)}>{tr("Download JSON", "下载 JSON")}</button><button type="button" onClick={exportSvg}>{tr("Download SVG", "下载 SVG")}</button></div>
       <details className="sa-method-details"><summary>{tr("Calculation details", "计算详情")}</summary>    <p className="sa-scope">{tr("ViennaRNA minimum-free-energy structure and partition-function probabilities for this arRNA alone (5–1,001 nt). No construct or linker sequence is added.", "仅对当前 arRNA（5–1,001 nt）进行 ViennaRNA 最小自由能结构和配分函数概率计算，不添加载体或连接序列。")}</p>
     {topology === "circular" && <p className="sa-model-note">{tr("The circular model joins the ends of this exact sequence. It does not model a complete circularization construct.", "环状模型将此序列的首尾直接连接，不代表完整环化构建体。")}</p>}
       <p className="sa-scope">{tr("Unpaired probabilities describe the thermodynamic ensemble. They do not predict editing efficiency. Lines show the minimum-free-energy (MFE) structure.", "未配对概率描述热力学系综，不用于预测编辑效率。图中连线表示最小自由能（MFE）结构中的配对。")}</p>
-<dl><div><dt>{tr("Engine", "引擎")}</dt><dd>{result.engine} {result.version}</dd></div><div><dt>{tr("Temperature", "温度")}</dt><dd>{result.temperature} °C</dd></div><div><dt>{tr("Ensemble free energy", "系综自由能")}</dt><dd>{result.ensemble_free_energy.toFixed(2)} kcal/mol</dd></div><div><dt>{tr("Ensemble diversity", "系综多样性")}</dt><dd>{result.ensemble_diversity.toFixed(2)}</dd></div><div><dt>{tr("Unpaired fraction in MFE structure", "MFE 结构中的未配对比例")}</dt><dd>{percentage(result.mfe_unpaired_fraction)}</dd></div></dl><p>{tr("arRNA and dot-bracket structure, 5′→3′", "arRNA 与点括号结构，5′→3′")}</p><pre>{result.sequence}{"\n"}{result.structure}</pre></details>
+<dl><div><dt>{tr("Engine", "引擎")}</dt><dd>{result.engine} {result.version}</dd></div><div><dt>{tr("Temperature", "温度")}</dt><dd>{result.temperature} °C</dd></div><div><dt>{tr("Ensemble free energy", "系综自由能")}</dt><dd>{result.ensemble_free_energy.toFixed(2)} kcal/mol</dd></div><div><dt>{tr("Ensemble diversity", "系综多样性")}</dt><dd>{result.ensemble_diversity.toFixed(2)}</dd></div><div><dt>{tr("Unpaired fraction in MFE structure", "MFE 结构中的未配对比例")}</dt><dd>{percentage(result.mfe_unpaired_fraction)}</dd></div></dl><p>{tr("arRNA and dot-bracket structure, 5′→3′", "arRNA 与点括号结构，5′→3′")}</p><pre style={{ color: "#1d6c9b" }}>{result.sequence}{"\n"}{result.structure}</pre></details>
     </div>}
   </section>;
 }

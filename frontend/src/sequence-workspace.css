@@ -38,7 +38,7 @@
 .sf-sequence-box { position:relative; padding:20px 30px; border:1px solid var(--ui-line); background:#fff; border-radius:34px; box-shadow:0 6px 16px rgba(48,43,33,.10),0 1px 3px rgba(48,43,33,.04); transition:box-shadow .18s,border-color .18s; overflow:hidden; }
 .sf-sequence-box:hover { border-color:var(--ui-line-strong); box-shadow:0 8px 20px rgba(48,43,33,.13),0 2px 5px rgba(48,43,33,.05); }
 .sf-sequence-box:focus-within { border-color:var(--ui-focus); box-shadow:0 8px 24px rgba(48,43,33,.15),0 2px 6px rgba(48,43,33,.06); }
-.sf-sequence-box textarea { width:100%; display:block; resize:none; min-height:1.8em; max-height:240px; padding:0; border:0; border-radius:0; background:transparent; font:400 15px/1.8 Arial,"PingFang SC","Microsoft YaHei",sans-serif; letter-spacing:.04em; color:var(--ui-ink); outline:none; box-shadow:none; overflow-wrap:anywhere; }
+.sf-sequence-box textarea { width:100%; display:block; resize:none; min-height:1.8em; max-height:240px; padding:0; border:0; border-radius:0; background:transparent; font:400 15px/1.8 Arial,"PingFang SC","Microsoft YaHei",sans-serif; letter-spacing:.04em; color:var(--rna-target); outline:none; box-shadow:none; overflow-wrap:anywhere; }
 .sf-sequence-box.has-sequence { border-radius:28px; }
 .sf-sequence-box.has-sequence textarea { resize:vertical; }
 .sf-sequence-box textarea::placeholder { font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif; letter-spacing:0; color:var(--ui-muted); }
@@ -105,6 +105,17 @@
 .sf-bulge-preset-options { position:absolute; z-index:5; top:calc(100% + 4px); left:0; width:max-content; max-width:calc(100vw - 64px); padding:5px; border:1px solid var(--ui-line); border-radius:12px; background:var(--ui-surface); box-shadow:0 6px 20px rgba(41,40,36,.12); }
 .sf-bulge-preset-options button { display:block; width:100%; padding:10px 12px; border:0; border-radius:8px; color:var(--ui-ink); background:transparent; font:13px/1.4 Arial, "PingFang SC", "Microsoft YaHei", sans-serif; text-align:left; cursor:pointer; }
 .sf-bulge-preset-options button:hover:not(:disabled) { background:var(--ui-soft); }
+.sf-external-presets .sf-bulge-preset-options { width:min(380px,calc(100vw - 64px)); max-height:min(540px,70vh); overflow-y:auto; overscroll-behavior:contain; }
+.sf-preset-group-label { margin:5px 12px 3px; color:var(--ui-muted); font-size:11px; font-weight:600; }
+.sf-protocol-presets { margin-top:7px; padding:12px 8px 5px; border-top:1px solid var(--ui-line); }
+.sf-protocol-presets h4 { margin:0 4px 7px; color:var(--ui-ink); font:600 13px/1.4 Arial,"PingFang SC","Microsoft YaHei",sans-serif; }
+.sf-preset-note,.sf-preset-source { margin:5px 4px 8px; color:var(--ui-muted); font:11px/1.6 Arial,"PingFang SC","Microsoft YaHei",sans-serif; }
+.sf-protocol-preset-groups { margin-top:9px; }
+.sf-protocol-preset-groups > details { border-top:1px solid var(--ui-line); }
+.sf-protocol-preset-groups > details > summary { display:flex; justify-content:space-between; align-items:center; gap:8px; list-style:none; padding:9px 4px; color:var(--ui-ink); font:600 12px/1.4 Arial,"PingFang SC","Microsoft YaHei",sans-serif; cursor:pointer; }
+.sf-protocol-preset-groups > details > summary::-webkit-details-marker { display:none; }
+.sf-protocol-preset-groups > details[open] > summary > svg { transform:rotate(180deg); }
+.sf-protocol-preset-groups > details > div { padding-bottom:4px; }
 .sf-structure-add-actions :is(button,summary):focus-visible { outline:2px solid var(--ui-focus); outline-offset:2px; }
 .sf-structure-add-actions button:disabled { color:var(--ui-muted); opacity:.55; cursor:default; }
 .sf-design-card { min-width:0; padding:18px 20px; border:1px solid var(--ui-line); border-radius:18px; background:var(--ui-surface); box-shadow:0 4px 16px rgba(48,43,33,.035); overflow:visible; }

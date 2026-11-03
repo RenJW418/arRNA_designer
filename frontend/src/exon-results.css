@@ -88,9 +88,9 @@
   height: auto;
   margin-inline: auto;
 }
-.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-backbone { fill: none; stroke: var(--ui-line-strong); stroke-width: 2; stroke-linecap: round; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-backbone { fill: none; stroke: var(--rna-target); stroke-width: 2; stroke-linecap: round; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-context-exon { fill: var(--ui-soft); stroke: var(--ui-line-strong); stroke-width: 1; }
-.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-coverage { fill: var(--ui-gold); stroke: none; }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-context-coverage { fill: var(--rna-guide); stroke: none; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-context-ese { fill: var(--exon-ese-fill); stroke: var(--exon-ese-line); stroke-width: .8; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-context-boundary { fill: none; stroke: var(--ui-line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-context-label { fill: var(--ui-muted); font-size: 11px; font-weight: 500; }
@@ -115,7 +115,7 @@
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-context-key { padding: 2px 0 0; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-context-key, .normal-schematic-legend) > span { display: inline-flex; align-items: center; gap: 7px; }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel :is(.exon-coverage-swatch, .exon-ese-swatch, .exon-mismatch-swatch) { display: inline-block; flex: 0 0 auto; width: 12px; height: 7px; border: 0; border-radius: 3px; }
-.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-coverage-swatch { height: 4px; background: var(--ui-gold); }
+.sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-coverage-swatch { height: 4px; background: var(--rna-guide); }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-ese-swatch { border: 1px solid var(--exon-ese-line); background: var(--exon-ese-fill); }
 .sf-inline-results .normal-tool-result.exon-tool-result .exon-pairing-panel .exon-mismatch-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--ui-accent); }
 

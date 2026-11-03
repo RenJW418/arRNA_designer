@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, Database, LoaderCircle, SlidersHorizontal } from "lucide-react";
 import { createNormalEditingDesign, normalResultToDesign, normalResultToVariants, type NormalEditingResult } from "../lib/api";
 import { createExonSkippingDesign, resolveNcbiCodingSequence, resolveNcbiExon, type ExonSkippingDesign, type ExonSkippingCandidate, type ExonCandidateWindow, type NcbiCodingReference, type NcbiExonReference } from "../lib/exonSkipping";
-import { classifyEditingSites, type NormalArrnaVariant } from "../lib/normalEditing";
+import { classifyEditingSites, designInitialArrna, designNormalArrnaVariants, selectDefaultNormalVariant, type NormalArrnaVariant } from "../lib/normalEditing";
 import { normalizeRestoredExonInput, parseSequenceInput, splitExonContext, type SequenceRange } from "../lib/sequenceExplorer";
 import { createAppliedCustomCandidate, type AppliedCustomCandidate, type CustomStructure } from "../lib/customDesign";
 import type { RnaTopology } from "../lib/sequenceAnalysis";
@@ -119,7 +119,7 @@ export function SequenceDesignWorkspace({ active, initialApplication, initialExa
       setWindowEnd(String(source.normalized_input.window_end_relative ?? source.target_window.length - source.target_index - 1));
       setWindowResetRevision((revision) => revision + 1);
       setCodingContext(source.normalized_input.coding_context ?? inputCodingContext);
-      setInternal(source.normalized_input.include_internal_bulge ?? false);
+      setInternal(source.normalized_input.include_internal_bulge ?? recommended.includeInternalBulge);
     }
   }, [appliedCustoms, normalResult, variants, appliedSettings, inputCodingContext]);
   useEffect(() => { if (!active) { setOpen(false); setNcbiOpen(false); requestVersion.current += 1; lookupVersion.current += 1; setLoading(false); setNcbiLoading(false); } }, [active]);
@@ -227,6 +227,14 @@ export function SequenceDesignWorkspace({ active, initialApplication, initialExa
     setExonWindowOverrides([]);
     setExonWindow(selectedExon ? exonDefaultWindows[selectedExon.id] ?? null : null);
     setCustomStructures(null);
+    if (mode === "normal_editing" && normalResult) {
+      // Reset the draft candidate as well, without replacing the applied result.
+      const defaultDesign = designInitialArrna(sequence, Number(position), 75, {
+        windowStartRelative: recommended.windowStart, windowEndRelative: recommended.windowEnd,
+      });
+      setSelectedNormal(defaultDesign
+        ? selectDefaultNormalVariant(designNormalArrnaVariants(defaultDesign)) ?? null : null);
+    }
   }
   function setSequenceCodingContext(value: boolean) {
     setInputCodingContext(value); setCodingContext(value);
@@ -294,11 +302,7 @@ export function SequenceDesignWorkspace({ active, initialApplication, initialExa
         if (requestVersion.current !== version) return;
         const nextVariants = normalResultToVariants(result);
         const nextSelected = nextVariants.find((variant) => variant.id === preferredCandidateId)
-          ?? (settings.includeInternalBulge ? nextVariants.find((variant) => variant.id === "dual-deletion-internal-del1") : undefined)
-          ?? nextVariants.find((variant) => variant.id === "dual-deletion")
-          ?? nextVariants.find((variant) => variant.id === "downstream-del10")
-          ?? nextVariants.find((variant) => variant.id === "upstream-del28")
-          ?? nextVariants[0] ?? null;
+          ?? selectDefaultNormalVariant(nextVariants, settings.includeInternalBulge) ?? null;
         if (!nextSelected && (requestedStructures !== null || (!useRecommended && appliedCustoms.length > 0))) throw new Error(tx("No candidate is available for these custom settings.", "当前设置未产生可供自定义的候选。"));
         const nextCustom = requestedStructures !== null && nextSelected
           ? createAppliedCustomCandidate(result, nextSelected, requestedStructures, appliedCustoms.length + 1, settings.foldTopology) : null;
@@ -365,9 +369,9 @@ export function SequenceDesignWorkspace({ active, initialApplication, initialExa
       </form>
     </section>
     {hasResult && <section ref={resultRef} className="sf-inline-results" aria-label={tx("Design results", "设计结果")} tabIndex={-1}>
-    {normalResult && design && (variants.length > 0 || appliedCustoms.length > 0) && <InitialArrnaResult showHeader={false} key={`${normalResult.window_start}-${normalResult.window_end}-${normalResult.normalized_input.target_position}`} design={design} variants={variants} result={normalResult} sites={resultSites} foldTopology={appliedSettings?.foldTopology ?? "linear"} selectedCandidateId={selectedCandidateId} customCandidates={appliedCustoms} onRevise={revise} onSelectionChange={onNormalSelection} />}
+    {normalResult && design && (variants.length > 0 || appliedCustoms.length > 0) && <InitialArrnaResult showHeader={false} key={`${normalResult.window_start}-${normalResult.window_end}-${normalResult.normalized_input.target_position}`} design={design} variants={variants} result={normalResult} sites={resultSites} foldTopology={appliedSettings?.foldTopology ?? recommended.foldTopology} selectedCandidateId={selectedCandidateId} customCandidates={appliedCustoms} onRevise={revise} onSelectionChange={onNormalSelection} />}
     {normalResult && variants.length === 0 && <section className="sf-empty-result"><h2>{tx("More sequence context is needed", "需要更多序列上下文")}</h2>{normalResult.warnings.map((v) => <p key={v}>{v}</p>)}<button type="button" onClick={revise}>{tx("Revise sequence", "修改序列")}</button></section>}
-    {exonResult && <ExonSkippingResult key={goResultRevision} design={exonResult} selectedCandidateId={selectedExonId} onSelectionChange={onExonSelection} onRevise={revise} foldTopology={appliedSettings?.foldTopology ?? "linear"} />}
+    {exonResult && <ExonSkippingResult key={goResultRevision} design={exonResult} selectedCandidateId={selectedExonId} onSelectionChange={onExonSelection} onRevise={revise} foldTopology={appliedSettings?.foldTopology ?? recommended.foldTopology} />}
     </section>}
     <div className="sf-bottom">
       <button ref={advancedTriggerRef} type="button" className="sf-advanced-trigger" onClick={() => open ? closeAdvanced() : showAdvanced()} aria-controls="advanced-settings" aria-expanded={open && active}>

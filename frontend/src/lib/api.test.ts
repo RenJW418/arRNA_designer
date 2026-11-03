@@ -1,9 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createNormalEditingRequest, normalizeApiError } from "./api.ts";
+import { createNormalEditingRequest, normalizeApiError, normalResultToVariants, type NormalEditingResult } from "./api.ts";
+import { readFileSync } from "node:fs";
 
 describe("normal-editing API contract", () => {
+  it("presents only the baseline and complete three-bulge candidate without altering the source result", () => {
+    const result: NormalEditingResult = JSON.parse(readFileSync(new URL("../../public/examples/normal-output.json", import.meta.url), "utf8"));
+    const dual = result.candidates.find(candidate => candidate.id === "dual-deletion")!;
+    // The adapter's contract is candidate visibility, not sequence generation.
+    result.candidates.push({ ...dual, id: "dual-deletion-internal-del1" });
+    const source = structuredClone(result);
+    assert.deepEqual(normalResultToVariants(result).map(candidate => candidate.id), ["baseline", "dual-deletion-internal-del1"]);
+    assert.deepEqual(result, source);
+  });
+  it("includes the internal bulge by default and respects an explicit opt-out", () => {
+    const sequence = "C".repeat(75) + "A" + "C".repeat(75);
+    assert.equal(createNormalEditingRequest(sequence, 76, "combined").include_internal_bulge, true);
+    assert.equal(createNormalEditingRequest(sequence, 76, "combined", null, { includeInternalBulge: false }).include_internal_bulge, false);
+  });
   it("normalizes sequence and sends a reference snapshot without the CDS", () => {
     const request = createNormalEditingRequest("aug\ncca", 1, "ADAR2", {
       species: "Homo sapiens",

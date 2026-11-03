@@ -301,10 +301,6 @@ textarea { resize: vertical; font-family: Arial, "PingFang SC", "Microsoft YaHei
 .protocol-settings { display: grid; gap: 12px; padding: 10px 0; }
 .protocol-check { display: flex !important; gap: 8px; align-items: flex-start; font-size: 11px; line-height: 1.5; cursor: pointer; }
 .protocol-check input[type="checkbox"] { width: 16px; min-width: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--accent); }
-.protocol-source-panels { display: grid; gap: 24px; margin: 30px 0; }
-.protocol-source-panels figure { margin: 0; padding: 16px; border: 1px solid var(--line); background: white; }
-.protocol-source-panels img { display: block; width: 100%; height: auto; }
-.protocol-source-panels figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; }
 .request-error { margin: 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: #faece9; color: var(--accent-dark); font-size: 10px; line-height: 1.5; }
 .resolved-reference { display: grid; gap: 5px; padding: 12px; border: 1px solid #b8c9bf; background: #f1f6f3; }
 .resolved-reference strong { color: var(--green); font-size: 10px; }.resolved-reference span { color: var(--muted); font-size: 9px; }

@@ -82,10 +82,12 @@ def test_ese_override_recomputes_full_partial_hit_and_adenosine_coverage():
 
 def test_multiple_windows_are_independent_and_recorded_without_changing_input_reference():
     windows = [window("sa-1", 100, 250), window("ese-1", 198, 218)]
+    # The two motif clusters must actually need separate151nt guides.
+    exon = "C" * 50 + "CACACGA" * 3 + "T" * 140 + "CACACGA" * 3 + "C" * 50
     reference = {"transcript": "NM_fixture.1", "genomic_accession": "NC_fixture.1",
                  "orientation": "minus", "exon_genomic_start": 1001, "exon_genomic_end": 1192}
-    baseline = design(reference=reference)
-    result = design(candidate_windows=windows, reference=reference)
+    baseline = design(exon=exon, reference=reference)
+    result = design(exon=exon, candidate_windows=windows, reference=reference)
     assert candidate(result, "sa-1").global_start == 100
     assert candidate(result, "ese-1").global_start == 198
     assert candidate(result, "ese-2") == candidate(baseline, "ese-2")
@@ -101,7 +103,7 @@ def test_empty_windows_keep_existing_default_design():
     explicit_empty = design(candidate_windows=[])
     assert explicit_empty.model_dump() == baseline.model_dump()
     assert [(item.id, item.global_start, item.global_end) for item in baseline.candidates] == [
-        ("sa-1", 76, 226), ("ese-1", 136, 286), ("ese-2", 212, 362)
+        ("sa-1", 76, 226), ("ese-1", 174, 324)
     ]
     assert baseline.design_settings.model_dump()["candidate_windows"] == []
 
@@ -137,7 +139,8 @@ def test_explicit_window_replaces_stale_short_sa_warning():
 
 
 def test_unapplied_mismatch_warning_uses_final_overridden_windows():
-    result = design(ese_mismatch_positions=[71], candidate_windows=[
+    exon = "C" * 50 + "CACACGA" * 3 + "T" * 140 + "CACACGA" * 3 + "C" * 50
+    result = design(exon=exon, ese_mismatch_positions=[71], candidate_windows=[
         window("ese-1", 198, 218), window("ese-2", 198, 218)
     ])
     assert all(not item.mismatch_exon_positions for item in result.candidates)

@@ -1,9 +1,12 @@
 /* Shared interface colors. Scientific evidence and structure legends keep
    their own categorical colors in the relevant components. */
 :root {
+  /* Sampled from the original Nature Protocols LEAPER 3.0 vector artwork. */
+  --rna-target: #040000;
+  --rna-guide: #1d6c9b;
   --ui-ink: #292824;
   --ui-muted: #6c685f;
-  --ui-canvas: #faf9f6;
+  --ui-canvas: #ffffff;
   --ui-surface: #ffffff;
   --ui-line: #e5e0d7;
   --ui-line-strong: #c6b99c;

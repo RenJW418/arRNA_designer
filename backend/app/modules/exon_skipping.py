@@ -130,6 +130,36 @@ def _window_around_group(first: int, last: int, length: int, total: int) -> tupl
     return start, end
 
 
+def _minimum_ese_windows(
+    targets: list[tuple[int, int]], length: int, total: int,
+) -> list[tuple[int, int]]:
+    """Cover complete 0-based, half-open targets with the fewest equal-length windows.
+
+    Each target permits an interval of window starts. Stabbing these intervals at
+    their earliest right endpoint is an exact minimum-cardinality cover. Centering
+    each assigned group afterward preserves containment and the minimum count.
+    """
+    if not targets:
+        return []
+    width = min(length, total)
+    feasible = []
+    for first, end in targets:
+        low, high = max(0, end - width), min(first, total - width)
+        if not 0 <= first < end <= total or low > high:
+            raise ValueError("A coverage target must fit completely in an arRNA window")
+        feasible.append((high, low, first, end))
+    groups: list[list[tuple[int, int]]] = []
+    selected_start = -1
+    for high, low, first, end in sorted(feasible):
+        if not low <= selected_start <= high:
+            selected_start = high
+            groups.append([])
+        groups[-1].append((first, end))
+    return sorted(_window_around_group(
+        min(first for first, _ in group), max(end for _, end in group) - 1, width, total,
+    ) for group in groups)
+
+
 def _apply_candidate_windows(
     payload: ExonSkippingDesignRequest,
     candidates: list[ArrnaCandidate],
@@ -239,31 +269,27 @@ def design_exon_skipping(payload: ExonSkippingDesignRequest) -> ExonSkippingDesi
                                  if sa.exon_start <= hit.start and hit.end <= sa.exon_end]
         sa.covered_a_positions = sorted({p for i in sa.covered_hit_indices
                                         for p in hits[i - 1].a_positions})
-    windows: set[tuple[int, int]] = set()
+    required_intervals: list[tuple[int, int]] = []
+
+    def require_ese_interval(first: int, end: int) -> None:
+        if (not payload.evaluate_covered_ese and sa is not None
+                and sa.global_start <= first + 1 and end <= sa.global_end):
+            return
+        required_intervals.append((first, end))
+
     for region in regions:
         first_global = exon_start_global + region.start - 1
-        last_global = exon_start_global + region.end - 1
-        if (not payload.evaluate_covered_ese and sa is not None
-                and sa.global_start <= first_global + 1 and sa.global_end >= last_global + 1):
-            continue
+        end_global = exon_start_global + region.end
         if region.end - region.start + 1 <= x:
-            windows.add(_window_around_group(first_global, last_global, x, len(full_sequence)))
+            require_ese_interval(first_global, end_global)
             continue
-        # A long merged region is covered by groups of complete motifs, not by A counts.
+        # A long merged region requires complete motifs, never partial-hit coverage.
         region_hits = [hit for hit in hits if region.start <= hit.start and hit.end <= region.end]
-        cursor = 0
-        while cursor < len(region_hits):
-            first = region_hits[cursor].start
-            last = region_hits[cursor].end
-            cursor += 1
-            while cursor < len(region_hits) and region_hits[cursor].end - first + 1 <= x:
-                last = max(last, region_hits[cursor].end)
-                cursor += 1
-            windows.add(_window_around_group(
-                exon_start_global + first - 1, exon_start_global + last - 1, x, len(full_sequence)
-            ))
+        for hit in region_hits:
+            require_ese_interval(exon_start_global + hit.start - 1, exon_start_global + hit.end)
 
-    for candidate_number, (start, end) in enumerate(sorted(windows), 1):
+    windows = _minimum_ese_windows(required_intervals, x, len(full_sequence))
+    for candidate_number, (start, end) in enumerate(windows, 1):
         exon_start = max(1, start - exon_start_global + 1)
         exon_end = min(exon_length, end - exon_start_global)
         full_regions = [i for i, region in enumerate(regions, 1)

@@ -4,8 +4,8 @@ export const RECOMMENDED_DESIGN_SETTINGS = {
   windowStart: -75,
   windowEnd: 75,
   arrnaLength: 151,
-  includeInternalBulge: false,
+  includeInternalBulge: true,
   evaluateCoveredEse: false,
   eseMismatchPositions: "",
-  foldTopology: "linear",
+  foldTopology: "circular",
 } as const;

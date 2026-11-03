@@ -8,6 +8,15 @@ import type { NormalDesignEnvironment, NormalArrnaVariant } from "./normalEditin
 import type { NormalEditingResult } from "./api.ts";
 import { createNormalExportBundle, serializeCsv, type DesignExportBundle, type ExportCandidate } from "./exports.ts";
 import type { RnaTopology } from "./sequenceAnalysis.ts";
+import { RECOMMENDED_DESIGN_SETTINGS } from "./designDefaults.ts";
+
+export interface PresetProvenance {
+  source: "protocol-table-1";
+  preset_id: string;
+  table: 1;
+  doi: null;
+  status: "unpublished-protocol";
+}
 
 export interface CustomStructure {
   id: string;
@@ -15,6 +24,8 @@ export interface CustomStructure {
   position: number;
   size: number;
   bases?: string;
+  /** Source of an unchanged preset geometry; independent of Bulge.source. */
+  preset_provenance?: PresetProvenance;
 }
 
 export function initialCustomStructures(variant: NormalArrnaVariant, environment: NormalDesignEnvironment): CustomStructure[] {
@@ -86,6 +97,7 @@ export function createCustomDesignExport(result: NormalEditingResult, variant: N
       effect_data_environment: bulge.effectSupport === "unsupported" ? null : bulgeEvidenceEnvironment(result.pairing.adar_environment, bulge.start),
       position_semantics: bulge.type === "insertion" ? "boundary_before_target_base" as const : "tract_edge_nearest_A0" as const,
       ...(bulge.type === "insertion" ? { bases: bulge.insertionBases } : bulge.type === "mismatch" ? { bases: bulge.mismatchBases } : {}),
+      ...(specs[index].preset_provenance ? { preset_provenance: structuredClone(specs[index].preset_provenance) } : {}),
     })),
     arrna_sequence: draft.sequence,
     warnings: [...draft.warnings],
@@ -122,13 +134,14 @@ export function createAppliedCustomCandidate(
   sourceVariant: NormalArrnaVariant,
   specs: CustomStructure[],
   ordinal = 1,
-  foldTopology: RnaTopology = "linear",
+  foldTopology: RnaTopology = RECOMMENDED_DESIGN_SETTINGS.foldTopology,
 ): AppliedCustomCandidate {
   if (!Number.isSafeInteger(ordinal) || ordinal < 1) throw new Error("Custom candidate number must be a positive integer.");
   if (foldTopology !== "linear" && foldTopology !== "circular") throw new Error("Choose a supported RNAfold topology.");
   const snapshot = createCustomDesignExport(result, sourceVariant, specs);
-  const structures: CustomStructure[] = snapshot.structures.map(({ id, type, position, size, bases }) => ({
+  const structures: CustomStructure[] = snapshot.structures.map(({ id, type, position, size, bases, preset_provenance }) => ({
     id, type, position, size, ...(bases !== undefined ? { bases } : {}),
+    ...(preset_provenance ? { preset_provenance: structuredClone(preset_provenance) } : {}),
   }));
   const draft = buildCustomDesign(snapshot.target_sequence, snapshot.target_index, snapshot.adar, structures);
   if (!draft.valid) throw new Error(draft.errors.join(" "));

@@ -11,6 +11,7 @@ import type { DesignExample } from "../lib/examples";
 import type { SharedDesignInput } from "../lib/urlState";
 import { InfoTip } from "./InfoTip";
 import { useLanguage } from "./LanguageProvider";
+import { RECOMMENDED_DESIGN_SETTINGS } from "../lib/designDefaults";
 import { TaskInputShell, type TaskStep } from "./TaskLayout";
 
 type Mode = "sequence" | "gene";
@@ -42,7 +43,7 @@ export function DesignWorkspace({ onExit, initialExample, initialApplication = "
   const [arrnaLength, setArrnaLength] = useState(initialInput?.arrnaLength ?? String(initialExample?.arrnaLength ?? 151));
   const [windowStart, setWindowStart] = useState(initialInput?.windowStart ?? "-75");
   const [windowEnd, setWindowEnd] = useState(initialInput?.windowEnd ?? "75");
-  const [includeInternalBulge, setIncludeInternalBulge] = useState(initialInput?.includeInternalBulge ?? false);
+  const [includeInternalBulge, setIncludeInternalBulge] = useState(initialInput?.includeInternalBulge ?? RECOMMENDED_DESIGN_SETTINGS.includeInternalBulge);
   const [codingContext, setCodingContext] = useState(initialInput?.codingContext ?? true);
   const [evaluateCoveredEse, setEvaluateCoveredEse] = useState(initialInput?.evaluateCoveredEse ?? false);
   const [eseMismatchPositions, setEseMismatchPositions] = useState(initialInput?.eseMismatchPositions ?? "");

@@ -1,5 +1,8 @@
+import { CircularGuideContinuation } from "./CircularGuideContinuation";
+import { DuplexPairingStalks } from "./DuplexPairingStalks";
 import { useId } from "react";
 import type { ExonSkippingCandidate, ExonSkippingDesign } from "../lib/exonSkipping";
+import { samplePairingPositions } from "../lib/pairingDisplay";
 import { useLanguage } from "./LanguageProvider";
 import "../pairing-overview.css";
 
@@ -45,7 +48,8 @@ export function ExonPairingOverview({ candidate, design }: Props) {
   });
   const boundaries = [{ position: exonStart - .5, label: "SA" }, { position: exonEnd + .5, label: "SD" }]
     .filter(boundary => boundary.position >= first && boundary.position <= last);
-  const pairStride = Math.max(1, Math.ceil(10 / step));
+  const pairPositions = samplePairingPositions(first, last, x, guideY - targetY,
+    position => !mismatchPositions.has(position));
 
   return <section className="exon-pairing-overview normal-pairing-schematic" aria-label={l("Base-pairing view")}>
     <div className="normal-schematic-scroll">
@@ -53,8 +57,8 @@ export function ExonPairingOverview({ candidate, design }: Props) {
         data-target-y={targetY} data-guide-y={guideY} role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}>
         <title id={`${id}-title`}>{l("Target and arRNA pairing schematic")}</title>
         <desc id={`${id}-description`}>{zh
-          ? `靶序列 ${first}–${last}。上方靶 RNA 为 5′ 到 3′，下方 arRNA 为 3′ 到 5′。圆点标示其他 A，圆节点仅标示返回序列中的实际 A–C 错配；浅色区为预测 ESE。SA 和 SD 位于相邻碱基之间。`
-          : `Target ${first}–${last}. Target RNA runs 5′ to 3′ above the antiparallel arRNA, shown 3′ to 5′. Dots mark other A sites; circular nodes show only actual A–C mismatches in the returned sequences. Shaded regions are predicted ESEs. SA and SD lie between adjacent bases.`}</desc>
+          ? `靶序列 ${first}–${last}。上方靶 RNA 为 5′ 到 3′，下方蓝色 arRNA 反向平行配对，两端向下连接为闭合环，环形不按比例绘制。圆点标示其他 A，圆节点仅标示返回序列中的实际 A–C 错配；浅色区为预测 ESE。SA 和 SD 位于相邻碱基之间。`
+          : `Target ${first}–${last}. Target RNA runs 5′ to 3′ above the blue antiparallel arRNA. The arRNA backbone connects underneath to form a closed ring, drawn schematically. Dots mark other A sites; circular nodes show only actual A–C mismatches in the returned sequences. Shaded regions are predicted ESEs. SA and SD lie between adjacent bases.`}</desc>
         {eseRegions.map(region => {
           const startX = x(Math.max(first, region.start - .5));
           const endX = x(Math.min(last, region.end + .5));
@@ -65,10 +69,9 @@ export function ExonPairingOverview({ candidate, design }: Props) {
         })}
         <path className="normal-schematic-target-line" d={`M ${left} ${targetY} H ${right}`} />
         <path className="normal-schematic-guide-line" d={`M ${left} ${guideY} H ${right}`} />
-        {Array.from({ length: Math.floor(Math.max(0, length - 1) / pairStride) + 1 }, (_, index) => index * pairStride).map(index => {
-          const position = first + index;
-          if (index >= length || mismatchPositions.has(position)) return null;
-          return <line className="normal-schematic-pair" data-position={position} key={position} x1={x(position)} x2={x(position)} y1={targetY + 2} y2={guideY - 2} />;
+        <CircularGuideContinuation left={left} right={right} y={guideY} />
+        {pairPositions.map(position => {
+          return <DuplexPairingStalks position={position} key={position} x={x(position)} targetY={targetY} guideY={guideY} />;
         })}
         {mismatchSites.map(site => {
           const radius = radiusAt(site.position);
@@ -103,8 +106,6 @@ export function ExonPairingOverview({ candidate, design }: Props) {
         <text className="normal-schematic-strand-label guide" x="12" y={guideY + 4}>arRNA</text>
         <text className="normal-schematic-direction" x={left - 14} y={targetY + 4} textAnchor="end">5′</text>
         <text className="normal-schematic-direction" x={right + 14} y={targetY + 4}>3′</text>
-        <text className="normal-schematic-direction guide" x={left - 14} y={guideY + 4} textAnchor="end">3′</text>
-        <text className="normal-schematic-direction guide" x={right + 14} y={guideY + 4}>5′</text>
       </svg>
     </div>
     <div className="normal-schematic-legend">

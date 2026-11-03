@@ -111,6 +111,29 @@ function windowedExonOutput(overrides = []) {
       };
     }) };
 }
+// Explicit display fixtures for the +4 deletion. The test checks the UI's
+// request, candidate selection and draft handling; backend tests verify design
+// generation itself. Existing aligned columns determine the removed guide base.
+function normalDisplay(body, output = normalOutput) {
+  const controls = output.candidates.filter(candidate => !candidate.id.endsWith("-internal-del1"));
+  const internalCandidates = controls.map(candidate => {
+    const aligned = Array.from(candidate.aligned_guide);
+    aligned[output.target_index + 4] = "-";
+    return { ...candidate, id: `${candidate.id}-internal-del1`,
+      label: `${candidate.label} with +4 internal deletion`,
+      short_label: `${candidate.short_label}; +4 deletion 1`,
+      aligned_guide: aligned.join(""), arrna_sequence: aligned.filter(base => base !== "-").reverse().join(""),
+      deletion_coordinates: [...candidate.deletion_coordinates, 4],
+    };
+  });
+  return { ...output, pairing: combinedPairing,
+    normalized_input: { ...output.normalized_input, coding_context: body.coding_context,
+      include_internal_bulge: body.include_internal_bulge },
+    candidates: body.include_internal_bulge ? [...controls, ...internalCandidates] : controls,
+  };
+}
+const normalWithInternalOutput = normalDisplay({ include_internal_bulge: true, coding_context: false });
+const primaryNormalCandidates = [normalWithInternalOutput.candidates[0], normalWithInternalOutput.candidates.find(candidate => candidate.id === "dual-deletion-internal-del1")];
 const annotationLog = [];
 let respondAnnotations;
 const annotationResponse = (body, extra = {}) => ({
@@ -139,7 +162,7 @@ beforeEach(() => {
   console.error = (...args) => { reactErrors.push(args.map(String).join(" ")); };
   respond = async (url, body) => {
     if (url.endsWith("/designs/normal-editing")) {
-      return response({ ...normalOutput, pairing: combinedPairing, normalized_input: { ...normalOutput.normalized_input, coding_context: body.coding_context, include_internal_bulge: body.include_internal_bulge } });
+      return response(normalDisplay(body));
     }
     if (url.endsWith("/exon-skipping/design")) return response(exonOutput);
     if (url.endsWith("/analysis/rnafold")) return response({ detail: "RNAfold unavailable in this DOM fixture." }, 503);
@@ -240,9 +263,9 @@ const applySettings = () => click(button("Apply settings"));
 function assertNoAdarChoice() {
   assert.equal(document.querySelector('select[aria-label="ADAR"]'), null, "The unified profile must not expose an ADAR1/2 selector");
 }
-function assertFixedLinearFolding() {
-  assert.equal(document.querySelector('select[aria-label="Folding model"]'), null, "Folding uses the fixed linear model without a selector");
-  assert.ok(foldRequests().every(({ body }) => body.topology === "linear"), "Every submitted fold must use the fixed linear model");
+function assertFixedCircularFolding() {
+  assert.equal(document.querySelector('select[aria-label="Folding model"]'), null, "Folding uses the fixed circular model without a selector");
+  assert.ok(foldRequests().every(({ body }) => body.topology === "circular"), "Every submitted fold must use the fixed circular model");
 }
 function assertNoCodingCheckbox() {
   assert.ok(!Array.from(document.querySelectorAll('#sf-panel-design input[type="checkbox"]')).some(input =>
@@ -252,13 +275,13 @@ function assertRecommendedNormalSettings() {
   assertNoAdarChoice();
   assert.equal(windowStartField().value, "-75");
   assert.equal(windowEndField().value, "75");
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
 }
 function assertRecommendedNormalRequest(request, codingContext = false) {
   assert.equal(request.adar_environment, "combined");
   assert.equal(request.window_start_relative, -75);
   assert.equal(request.window_end_relative, 75);
-  assert.equal(request.include_internal_bulge, false);
+  assert.equal(request.include_internal_bulge, true);
   assert.equal(request.coding_context, codingContext);
 }
 function pairingAnchor(svg) {
@@ -282,6 +305,31 @@ function assertPairingAnchor(svg, expected, context) {
   for (const strand of ["target", "guide"]) for (const axis of ["x", "y"]) {
     assert.ok(Math.abs(actual[strand][axis] - expected[strand][axis]) < 1e-8,
       `${context}: ${strand} ${axis} must remain fixed (${actual[strand][axis]} versus ${expected[strand][axis]})`);
+  }
+}
+function assertClosedGuideRing(svg) {
+  const ring = query('.normal-schematic-circular-guide[data-topology="circular"]', svg);
+  const [left, right, guideY, bottom] = ["left", "right", "guideY", "bottomY"].map(key => Number(ring.dataset[key]));
+  assert.ok([left, right, guideY, bottom].every(Number.isFinite) && left <= right && bottom > guideY);
+  assert.equal(ring.querySelectorAll("path").length, 1, "One uninterrupted return path closes the guide underneath");
+  const path = query("path", ring).getAttribute("d");
+  assert.ok(path.startsWith(`M ${right} ${guideY} C `), "The lower return starts at the right end of the paired guide");
+  assert.ok(path.endsWith(`${left} ${guideY}`), "The lower return reconnects to the left end of the paired guide");
+  assert.ok(!/[zZ]/.test(path), "Closure must not add a straight edge across guide-side bulges");
+  assert.ok(query(".normal-schematic-guide-line", svg).getAttribute("d").startsWith(`M ${left} ${guideY}`));
+  const viewBox = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+  assert.ok(bottom < viewBox[1] + viewBox[3], "The complete ring stays inside the SVG canvas");
+  for (const handle of svg.querySelectorAll(".wrs-handle")) {
+    const handleY = Number(handle.getAttribute("transform").match(/^translate\([^ ,]+[ ,]+([^\)]+)\)$/)[1]);
+    assert.ok(handleY - 22 > bottom, "Window handles stay below the ring, including their hit regions");
+  }
+  for (const badge of svg.querySelectorAll(".normal-schematic-bulge-label.insertion rect")) {
+    assert.ok(Number(badge.getAttribute("y")) + Number(badge.getAttribute("height")) < bottom,
+      "Guide insertion labels have clearance above the lower return");
+  }
+  const coordinate = svg.querySelector(".normal-schematic-target-coordinate");
+  if (coordinate && !svg.classList.contains("wrs-duplex-svg")) {
+    assert.ok(Number(coordinate.getAttribute("y")) > bottom, "A0 coordinate sits below the ring");
   }
 }
 const candidateCards = () => Array.from(document.querySelectorAll(".normal-candidate-card"));
@@ -491,7 +539,7 @@ test("Advanced opens inline with the main page remaining interactive", async () 
   assert.ok(!Array.from(panel.querySelectorAll("button")).some(control => /Reference|Load from NCBI/.test(control.textContent)), "The removed Reference entry must not be available");
   assert.ok(!panel.querySelector("#sf-tab-structure, #sf-panel-structure"), "The removed structure/model tab must not return");
   assertNoAdarChoice();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   assert.ok(!panel.querySelector("#sf-tab-annotations, #sf-panel-annotations"), "Features must not remain in Advanced");
   await click(trigger);
   await flushScroll();
@@ -604,6 +652,92 @@ test("legacy gene links never load NCBI and can still design an already supplied
   assert.equal(requestLog.filter(({ url }) => url.includes("/references/")).length, 0);
 });
 
+test("default Normal Go includes a removable +4 1 nt internal bulge and restores it on the next Go", async () => {
+  await mount();
+  await startNormal();
+  await submit();
+  assert.equal(designRequests().at(-1).body.include_internal_bulge, true);
+  const selected = () => query('.normal-result-page .normal-candidate-card[data-selected="true"]');
+  assert.equal(selected().dataset.candidateId, "dual-deletion-internal-del1");
+  assert.equal(query(".normal-sequence-text").textContent.length, 112);
+  assert.deepEqual(candidateCards().map(card => card.dataset.candidateId), ["baseline", "dual-deletion-internal-del1"], "Only Baseline and the complete three-bulge design should be offered");
+  await click(query('.normal-candidate-card[data-candidate-id="baseline"] .normal-candidate-option'));
+  assert.equal(query(".normal-sequence-text").textContent.length, 151);
+  await click(query('.normal-candidate-card[data-candidate-id="dual-deletion-internal-del1"] .normal-candidate-option'));
+  const resultBulge = query('.normal-result-page g.normal-schematic-bulge[data-start="4"]');
+  assert.equal(resultBulge.dataset.end, "4");
+  assert.equal(resultBulge.dataset.count, "1");
+  assert.equal(query('.normal-result-page .normal-schematic-target-guide text').textContent, "C");
+  await click(query(".sf-advanced-trigger"));
+  const editor = query(".custom-structure-editor");
+  const internal = Array.from(editor.querySelectorAll(".sf-structure-row")).find(row =>
+    query('input[type="number"]', row).value === "4");
+  assert.ok(internal, "Advanced must start from the selected candidate's internal bulge");
+  assert.deepEqual(Array.from(internal.querySelectorAll('input[type="number"]'), input => input.value), ["4", "1"]);
+  assert.equal(query("select", internal).value, "deletion");
+  assert.equal(button("Internal bulge", editor).disabled, true, "The default preset cannot be added twice");
+  await click(query(".sf-icon-button", internal));
+  assert.equal(query(".normal-sequence-text").textContent.length, 112, "Removing a draft bulge must not rewrite the applied result");
+  await applySettings();
+  assert.equal(selected().dataset.candidateId, "custom-1");
+  assert.equal(query(".normal-sequence-text").textContent.length, 113);
+  assert.equal(document.querySelector('.normal-result-page g.normal-schematic-bulge[data-start="4"]'), null);
+  await submit();
+  assert.equal(selected().dataset.candidateId, "dual-deletion-internal-del1");
+  assert.equal(query(".normal-sequence-text").textContent.length, 112);
+  assert.equal(customCandidateCards().length, 0);
+  await click(query(".sf-advanced-trigger"));
+  assert.ok(query('.custom-structure-editor g.normal-schematic-bulge[data-start="4"][data-count="1"]'));
+});
+
+test("a saved design without the internal bulge stays unchanged on Apply until defaults are restored", async () => {
+  await mount({ view: "design", application: "normal_editing", input: {
+    mode: "sequence", sequence: normalInput.sequence, position: String(normalInput.target_position),
+    includeInternalBulge: false, codingContext: false,
+  } });
+  await click(query(".sf-advanced-trigger"));
+  await applySettings();
+  assert.equal(designRequests().at(-1).body.include_internal_bulge, false);
+  assert.equal(candidateCards().length, 1);
+  assert.equal(query('.normal-candidate-card[data-selected="true"]').dataset.candidateId, "baseline");
+  assert.equal(query(".normal-sequence-text").textContent.length, 151);
+  await click(query(".sf-advanced-trigger"));
+  const requestsBeforeReset = designRequests().length;
+  await click(button("Restore recommended settings"));
+  assert.equal(designRequests().length, requestsBeforeReset, "Restore only changes the draft");
+  assert.equal(query(".normal-sequence-text").textContent.length, 151);
+  await applySettings();
+  assert.equal(designRequests().at(-1).body.include_internal_bulge, true);
+  assert.equal(query('.normal-candidate-card[data-selected="true"]').dataset.candidateId, "dual-deletion-internal-del1");
+  assert.equal(query(".normal-sequence-text").textContent.length, 112);
+  assert.equal(customCandidateCards().length, 0, "Restoring the standard preset must not append an unnecessary Custom card");
+});
+
+test("a window without the complete three-bulge preset shows only Baseline", async () => {
+  const baseline = normalOutput.candidates.find(candidate => candidate.id === "baseline");
+  const downstream = normalOutput.candidates.find(candidate => candidate.id === "downstream-del10");
+  const limited = {
+    ...normalOutput, window_start: 46, target_window: normalOutput.target_window.slice(45), target_index: 30, upstream_length: 30,
+    normalized_input: { ...normalOutput.normalized_input, window_start_relative: -30 },
+    candidates: [baseline, downstream].map(candidate => ({ ...candidate,
+      aligned_guide: candidate.aligned_guide.slice(45), arrna_sequence: candidate.arrna_sequence.slice(0, -45),
+    })),
+  };
+  const defaultRespond = respond;
+  respond = async (url, body) => url.endsWith("/designs/normal-editing") ? response(normalDisplay(body, limited)) : defaultRespond(url, body);
+  await mount({ view: "design", application: "normal_editing", input: {
+    mode: "sequence", sequence: normalInput.sequence, position: String(normalInput.target_position),
+    windowStart: "-30", windowEnd: "75", includeInternalBulge: true, codingContext: false,
+  } });
+  await click(query(".sf-advanced-trigger"));
+  await applySettings();
+  assert.equal(designRequests().at(-1).body.window_start_relative, -30);
+  assert.deepEqual(candidateCards().map(card => card.dataset.candidateId), ["baseline"]);
+  assert.equal(query('.normal-candidate-card[data-selected="true"]').dataset.candidateId, "baseline");
+  assert.equal(query(".normal-sequence-text").textContent.length, 106);
+  assert.match(query(".variant-unavailable-note").textContent, /−31.*−68/);
+});
+
 test("normal results end at sequence export, with no extra disclosures or refinement entry", async () => {
   await mount();
   await startNormal();
@@ -626,7 +760,7 @@ test("normal pairing markers, deletion arcs and strand directions retain their c
   await submit();
   const expectedSites = Array.from(normalOutput.target_window).flatMap((base, index) => base === "A"
     ? [{ position: normalOutput.window_start + index, relative: index - normalOutput.target_index, index }] : []);
-  const dualIndex = normalOutput.candidates.findIndex(candidate => candidate.id === "dual-deletion");
+  const dualIndex = primaryNormalCandidates.findIndex(candidate => candidate.id === "dual-deletion-internal-del1");
   const inspect = (candidate) => {
     const svg = query('.normal-pairing-schematic svg[role="img"]');
     const guideLine = query(".normal-schematic-guide-line", svg);
@@ -684,10 +818,12 @@ test("normal pairing markers, deletion arcs and strand directions retain their c
       return Array.from({ length: end - start + 1 }, (_, index) => start + index);
     });
     assert.deepEqual(shownDeleted, [...candidate.deletion_coordinates].sort((a, b) => a - b), "Bulges must cover exactly the candidate's deleted coordinates");
-    if (candidate.id === "dual-deletion") assert.deepEqual(bulges.map(bulge => Number(bulge.dataset.count)), [28, 10]);
+    if (candidate.id === "dual-deletion-internal-del1") assert.deepEqual(bulges.map(bulge => Number(bulge.dataset.count)), [28, 1, 10]);
     if (candidate.id === "baseline") assert.equal(bulges.length, 0);
     const pairs = Array.from(svg.querySelectorAll(".normal-schematic-pair"));
     assert.ok(pairs.length > 0);
+    assert.equal(pairs.length, 2 * (normalOutput.target_window.length - candidate.deletion_coordinates.length - 1),
+      "The standard window retains one black/blue pair of marks at every actual paired base");
     for (const pair of pairs) {
       const relative = Number(pair.dataset.relative);
       assert.ok(Number.isInteger(relative));
@@ -712,19 +848,20 @@ test("normal pairing markers, deletion arcs and strand directions retain their c
     assert.equal(Number(targetPair.getAttribute("x1")), targetX);
     assert.equal(Number(targetPair.getAttribute("x2")), targetX);
     assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction:not(.guide)"), node => node.textContent), ["5′", "3′"]);
-    assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction.guide"), node => node.textContent), ["3′", "5′"]);
+    assert.equal(svg.querySelectorAll(".normal-schematic-direction.guide").length, 0, "Circular guide continuation must not be labelled as free 3′/5′ ends");
+    assertClosedGuideRing(svg);
     assert.equal(query(".normal-sequence-text").textContent, candidate.arrna_sequence);
     return markers.map(marker => ({ position: marker.dataset.position, relative: marker.dataset.relative, transform: marker.getAttribute("transform") }));
   };
-  const initialMarkers = inspect(normalOutput.candidates[dualIndex]);
+  const initialMarkers = inspect(primaryNormalCandidates[dualIndex]);
   const fixedAnchor = pairingAnchor(query('.normal-result-page .normal-pairing-schematic svg'));
-  for (const [index, candidate] of normalOutput.candidates.entries()) {
+  for (const [index, candidate] of primaryNormalCandidates.entries()) {
     await click(query(".normal-candidate-option", candidateCards()[index]));
     inspect(candidate);
     assertPairingAnchor(query('.normal-result-page .normal-pairing-schematic svg'), fixedAnchor, `Switching to ${candidate.id}`);
   }
   await click(query(".normal-candidate-option", candidateCards()[dualIndex]));
-  assert.deepEqual(inspect(normalOutput.candidates[dualIndex]), initialMarkers);
+  assert.deepEqual(inspect(primaryNormalCandidates[dualIndex]), initialMarkers);
   assert.equal(designRequests().length, 1, "Changing the representation must not regenerate designs");
 });
 
@@ -803,7 +940,7 @@ test("result A–C anchors retain the window fraction across cropped displays an
         const y1 = Number(pair.getAttribute("y1")), y2 = Number(pair.getAttribute("y2"));
         assert.ok(Number.isFinite(x) && x >= left - 1e-8 && x <= right + 1e-8);
         assert.equal(Number(pair.getAttribute("x2")), x);
-        assert.ok(y1 > fixedAnchor.target.y && y2 < fixedAnchor.guide.y && y1 < y2);
+        assert.ok(y1 >= fixedAnchor.target.y && y2 <= fixedAnchor.guide.y && y1 < y2);
         assert.ok(relative !== 0 && !structures.some(structure => structure.type !== "insertion" && relative >= structure.start && relative <= structure.end));
         if (relative === firstRelative) assert.ok(Math.abs(x - left) < 1e-8, `${context}: the first paired base must align with the strand endpoint`);
         if (relative === lastRelative) assert.ok(Math.abs(x - right) < 1e-8, `${context}: the last paired base must align with the strand endpoint`);
@@ -844,8 +981,8 @@ test("pairing diagrams use distinct accessible SVG descriptions and read the act
   // sparse connector grid, and replace the baseline guide label with U. This
   // checks rendering of supplied data, without running a design algorithm.
   const displayOutput = {
-    ...normalOutput, window_start: 4, target_window: normalOutput.target_window.slice(3), target_index: 72, upstream_length: 72,
-    candidates: normalOutput.candidates.map(candidate => ({ ...candidate,
+    ...normalWithInternalOutput, window_start: 4, target_window: normalOutput.target_window.slice(3), target_index: 72, upstream_length: 72,
+    candidates: normalWithInternalOutput.candidates.map(candidate => ({ ...candidate,
       arrna_sequence: candidate.arrna_sequence.slice(0, -3),
       aligned_guide: candidate.id === "baseline"
         ? candidate.aligned_guide.slice(3, 75) + "U" + candidate.aligned_guide.slice(76)
@@ -879,7 +1016,7 @@ test("pairing diagrams use distinct accessible SVG descriptions and read the act
       if (tag === "desc") assert.match(text.textContent, /not to scale/i, "The compressed diagram must disclose that its spacing is schematic");
       ids.push(id);
     }
-    assert.equal(svg.querySelector('.normal-schematic-pair[data-relative="0"]'), null, "Even when A0 is on the sparse marker grid, only its dedicated connector should render");
+    assert.equal(svg.querySelector('.normal-schematic-pair[data-relative="0"]'), null, "Even at dense pairing resolution, A0 uses only its dedicated connector");
     assert.equal(svg.querySelectorAll(".normal-schematic-target-pair").length, 1);
   }
   assert.equal(new Set(ids).size, ids.length, "Simultaneous result instances must not share title or description IDs");
@@ -922,7 +1059,7 @@ test("exon results use the compact shared layout while retaining diagnostics and
   const lastTrigger = thumbnailTrigger(exonOutput.candidates.length - 1);
   await click(lastTrigger);
   assert.equal(query(".normal-sequence-text", result).textContent, lastCandidate.arrna_sequence);
-  assert.match(query(".rna-fold-modal-header", foldDialog()).textContent, new RegExp(lastCandidate.label));
+  assert.equal(query(".rna-fold-modal-header", foldDialog()).textContent, "ESE targeting 1");
   await closeFoldDialog();
   assert.ok(document.activeElement === lastTrigger);
 });
@@ -981,6 +1118,8 @@ test("exon pairing preserves actual bases, context coordinates and exported data
       assert.equal(nodeY, Number(svg.dataset.guideY));
     }
     assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-target-pair"), node => Number(node.dataset.position)), mismatches);
+    assert.equal(svg.querySelectorAll(".normal-schematic-pair-target").length, candidate.target_sequence.length - mismatches.length,
+      "The standard Exon window shows every paired nucleotide rather than every second base");
     for (const line of svg.querySelectorAll(".normal-schematic-pair")) {
       const position = Number(line.dataset.position);
       assert.ok(position >= candidate.global_start && position <= candidate.global_end && !mismatches.includes(position));
@@ -995,7 +1134,8 @@ test("exon pairing preserves actual bases, context coordinates and exported data
     assert.deepEqual([Number(ese.dataset.start), Number(ese.dataset.end)], [start, end]);
     approximate(Number(ese.getAttribute("x")), x(Math.max(candidate.global_start, start - .5)));
     approximate(Number(ese.getAttribute("width")), x(Math.min(candidate.global_end, end + .5)) - x(Math.max(candidate.global_start, start - .5)));
-    assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), node => node.textContent), ["5′", "3′", "3′", "5′"]);
+    assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), node => node.textContent), ["5′", "3′"]);
+    assertClosedGuideRing(svg);
     const ids = [svg.getAttribute("aria-labelledby"), svg.getAttribute("aria-describedby")];
     assert.equal(new Set(ids).size, 2);
     for (const id of ids) assert.ok(id && svg.contains(document.getElementById(id)), "Accessible labels must belong to the displayed pairing SVG");
@@ -1168,24 +1308,24 @@ test("clicking an A submits that target; candidate changes share automatic RNAfo
   assert.equal(requestLog[0].body.sequence, normalInput.sequence);
   assert.equal(requestLog[0].body.coding_context, false);
   const candidates = Array.from(document.querySelectorAll(".normal-candidate-option"));
-  assert.equal(candidates.length, normalOutput.candidates.length);
+  assert.equal(candidates.length, 2);
   await click(candidates[0]);
   assert.equal(query(".normal-sequence-text").textContent, normalOutput.candidates[0].arrna_sequence);
   await click(candidates[1]);
-  const chosen = normalOutput.candidates[1].arrna_sequence;
+  const chosen = primaryNormalCandidates[1].arrna_sequence;
   assert.equal(query(".normal-sequence-text").textContent, chosen);
   await settleRequests();
-  assert.equal(foldRequests().length, normalOutput.candidates.length);
-  assert.ok(foldRequests().some(({ body }) => body.sequence === chosen && body.topology === "linear"));
+  assert.equal(foldRequests().length, 2);
+  assert.ok(foldRequests().some(({ body }) => body.sequence === chosen && body.topology === "circular"));
   assert.equal(document.querySelector(".rna-fold-panel"), null, "The results must not include a permanent large plot");
   await click(thumbnailTrigger(1));
   const foldPanel = query('.rna-fold-panel[data-status="error"]', foldDialog());
   assert.match(query('[role="alert"]', foldPanel).textContent, /unavailable/i);
   await click(button("Retry RNAfold", foldPanel));
   await settleRequests();
-  assert.equal(foldRequests().length, normalOutput.candidates.length + 1);
+  assert.equal(foldRequests().length, 2 + 1);
   assert.equal(foldRequests().at(-1).body.sequence, chosen);
-  assert.equal(foldRequests().at(-1).body.topology, "linear");
+  assert.equal(foldRequests().at(-1).body.topology, "circular");
   await closeFoldDialog();
 });
 
@@ -1308,9 +1448,9 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   await startNormal();
   await submit();
   const candidates = Array.from(document.querySelectorAll(".normal-candidate-option"));
-  const dualIndex = normalOutput.candidates.findIndex((candidate) => candidate.id === "dual-deletion");
+  const dualIndex = 1;
   await click(candidates[dualIndex]);
-  assert.equal(query(".normal-sequence-text").textContent.length, 113);
+  assert.equal(query(".normal-sequence-text").textContent.length, 112);
   await click(query(".sf-advanced-trigger"));
   const editor = query(".custom-structure-editor");
   assert.ok(!Array.from(editor.querySelectorAll("summary")).some(summary => summary.textContent.includes("Design notes")));
@@ -1322,6 +1462,7 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   }));
   const initialRegions = [
     { type: "deletion", start: -58, end: -31, count: 28 },
+    { type: "deletion", start: 4, end: 4, count: 1 },
     { type: "deletion", start: 34, end: 43, count: 10 },
   ];
   assert.deepEqual(previewRegions(), initialRegions);
@@ -1341,14 +1482,14 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   const externalTrigger = query("summary", externalMenu);
   const externalPresets = [
     { position: "-31", name: "Upstream −31 · 28/0", region: initialRegions[0] },
-    { position: "34", name: "Downstream +34 · 10/0", region: initialRegions[1] },
+    { position: "34", name: "Downstream +34 · 10/0", region: initialRegions[2] },
   ];
   await click(externalTrigger);
   for (const preset of externalPresets) {
     const existing = button(preset.name, externalMenu);
     assert.equal(existing.disabled, true, "An existing external preset must not be added twice");
     await click(existing);
-    assert.equal(editor.querySelectorAll(".sf-structure-row").length, 2);
+    assert.equal(editor.querySelectorAll(".sf-structure-row").length, 3);
   }
   await act(async () => externalTrigger.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   assert.equal(externalMenu.open, false);
@@ -1358,7 +1499,7 @@ test("custom drafts join the candidate picker only after Apply and remain availa
     assert.ok(row, "The selected candidate must expose each external structure");
     await click(query("button.sf-icon-button", row));
     assert.deepEqual(previewRegions(), initialRegions.filter(region => region !== preset.region));
-    assert.equal(query(".normal-sequence-text").textContent.length, 113, "A removed draft preset must not change the displayed candidate");
+    assert.equal(query(".normal-sequence-text").textContent.length, 112, "A removed draft preset must not change the displayed candidate");
     await click(externalTrigger);
     const addExternal = button(preset.name, externalMenu);
     assert.equal(addExternal.disabled, false, "Removing a preset must make its add action available again");
@@ -1370,7 +1511,7 @@ test("custom drafts join the candidate picker only after Apply and remain availa
     assert.equal(button(preset.name, externalMenu).disabled, true);
   }
   await click(button("Internal bulge", editor));
-  let addedRow = Array.from(editor.querySelectorAll(".sf-structure-row")).at(-1);
+  let addedRow = Array.from(editor.querySelectorAll(".sf-structure-row")).find(row => query('input[type="number"]', row).value === "4");
   assert.equal(query("select", addedRow).value, "deletion", "The internal preset must use a target-side deletion rather than a mismatch");
   assert.deepEqual(Array.from(addedRow.querySelectorAll('input[type="number"]'), input => input.value), ["4", "1"]);
   assert.ok(previewRegions().some(region => region.type === "deletion" && region.start === 4 && region.end === 4 && region.count === 1));
@@ -1383,13 +1524,14 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   assert.equal(query(".normal-schematic-target-line", appliedSchematic).getAttribute("d"), appliedTargetPath, "A preview edit must not redraw the applied result");
   await click(query(".sf-custom-fields-heading button", editor));
   assert.deepEqual(previewRegions(), initialRegions, "Reset must restore the selected candidate's original loops");
-  assert.equal(query(".normal-sequence-text").textContent.length, 113);
+  assert.equal(query(".normal-sequence-text").textContent.length, 112);
   assert.equal(designRequests().length, 1, "Draft edits and Reset must not request a new design");
   await click(button("Internal bulge", editor));
-  addedRow = Array.from(editor.querySelectorAll(".sf-structure-row")).at(-1);
+  addedRow = Array.from(editor.querySelectorAll(".sf-structure-row")).find(row => query('input[type="number"]', row).value === "4");
   const [addedPosition, addedSize] = addedRow.querySelectorAll('input[type="number"]');
   assert.equal(addedPosition.value, "4");
   assert.equal(addedSize.value, "1");
+  await enter(addedPosition, "5");
   const customRegions = previewRegions();
   await settleRequests();
   const foldCount = foldRequests().length;
@@ -1404,7 +1546,7 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   await settleRequests();
   const customSequence = query(".normal-sequence-text").textContent;
   assert.equal(customSequence.length, 112);
-  assert.equal(candidateCards().length, normalOutput.candidates.length + 1);
+  assert.equal(candidateCards().length, 2 + 1);
   assert.equal(customCandidateCard()?.dataset.selected, "true");
   assert.match(customCandidateCard().textContent, /Custom 1/);
   assert.equal(document.querySelector(".sf-custom-banner, .sf-source-label, .sf-custom-output"), null);
@@ -1432,10 +1574,10 @@ test("custom drafts join the candidate picker only after Apply and remain availa
   assert.deepEqual(previewRegions(), customRegions, "Selecting custom again must restore its applied structures to the editor");
   assert.equal(foldRequests().length, requestCountAfterApply);
   await click(query(".sf-advanced-trigger"));
-  await enter(Array.from(editor.querySelectorAll(".sf-structure-row")).at(-1).querySelectorAll('input[type="number"]')[1], "2");
+  await enter(Array.from(editor.querySelectorAll(".sf-structure-row")).find(row => query('input[type="number"]', row).value === "5").querySelectorAll('input[type="number"]')[1], "2");
   assert.equal(query(".normal-sequence-text").textContent, customSequence, "Editing the selected custom candidate remains a draft until Apply");
   await applySettings();
-  assert.equal(candidateCards().length, normalOutput.candidates.length + 2, "A second custom Apply appends another custom card");
+  assert.equal(candidateCards().length, 2 + 2, "A second custom Apply appends another custom card");
   assert.equal(customCandidateCards().length, 2);
   assert.equal(customCandidateCard("custom-2").dataset.selected, "true");
   assert.match(customCandidateCard("custom-2").textContent, /Custom 2/);
@@ -1450,6 +1592,7 @@ test("an invalid custom draft cannot replace the previous applied results or tri
   await mount();
   await startNormal();
   await submit();
+  await click(query('.normal-candidate-card[data-candidate-id="baseline"] .normal-candidate-option'));
   await click(query(".sf-advanced-trigger"));
   await click(button("Internal bulge", query(".custom-structure-editor")));
   await applySettings();
@@ -1501,11 +1644,13 @@ test("an applied insertion and mismatch use the shared candidate diagram, copy c
   assert.equal(editor.querySelector('[role="alert"]'), null);
   await applySettings();
   await settleRequests();
+  // Let Apply finish focusing the new result before interacting with its menu.
+  await flushScroll();
   const result = query(".normal-result-page");
   const sequence = query(".normal-sequence-text", result).textContent;
   assert.equal(sequence.length, 152);
   assert.equal(customCandidateCard()?.dataset.selected, "true");
-  assert.equal(candidateCards().length, 5);
+  assert.equal(candidateCards().length, 2 + 1);
   assert.deepEqual(Array.from(query(".normal-pairing-panel", result).querySelectorAll("g.normal-schematic-bulge"), loop => loop.dataset.type), ["insertion", "mismatch"]);
   assert.equal(document.querySelector(".sf-custom-banner, .sf-source-label, .sf-custom-output"), null);
   assert.ok(foldRequests().some(({ body }) => body.sequence === sequence));
@@ -1529,7 +1674,7 @@ test("an applied insertion and mismatch use the shared candidate diagram, copy c
     }
     assert.equal(downloaded.length, 3);
     const json = JSON.parse(await downloaded[0].text());
-    assert.equal(json.candidates.length, 5);
+    assert.equal(json.candidates.length, 2 + 1);
     assert.deepEqual(json.candidates.filter(candidate => candidate.selected).map(candidate => candidate.id), ["custom-1"]);
     const exported = json.candidates.find(candidate => candidate.id === "custom-1");
     assert.equal(exported.sequence, sequence);
@@ -1544,10 +1689,12 @@ test("an applied insertion and mismatch use the shared candidate diagram, copy c
       { type: "mismatch", start: 12, end: 12, size: 1, bases: mismatchBase },
     ]);
     const fasta = await downloaded[1].text();
+    assert.equal(fasta.split("\n").filter(line => line.startsWith(">")).length, 3, "FASTA includes only the two visible presets and Custom");
     const customRecord = fasta.split(">").find(record => record.startsWith("LEAPER_normal_editing_custom-1_selected_5to3\n"));
     assert.ok(customRecord);
     assert.equal(customRecord.split("\n").slice(1).join("").trim(), sequence);
     const [header, ...rows] = (await downloaded[2].text()).trim().split("\n").map(line => line.split(","));
+    assert.equal(rows.length, 3, "CSV includes only the two visible presets and Custom");
     const customRow = rows.find(cells => cells[header.indexOf("candidate_id")] === "custom-1");
     assert.ok(customRow);
     assert.equal(customRow[header.indexOf("arrna_sequence_5to3")], sequence);
@@ -1611,35 +1758,35 @@ test("custom candidates retain independent windows and structures under the unif
   assert.deepEqual(scrollLog.at(-1)?.options, { behavior: "smooth", block: "center" });
   const scrollsAfterSecondApply = scrollLog.length;
   assert.equal(secondSequence.length, 144);
-  assert.equal(candidateCards().length, 6);
+  assert.equal(candidateCards().length, 3);
   assert.deepEqual(customCandidateCards().map(card => card.dataset.candidateId), ["custom-1", "custom-2"]);
   assert.equal(customCandidateCard("custom-2").dataset.selected, "true");
   const secondDrawing = schematicState();
   assert.notDeepEqual(secondDrawing.markers, firstDrawing.markers, "The cropped display fixture must use a distinct source window");
-  assert.equal(query(".rna-fold-thumbnail", customCandidateCard()).dataset.topology, "linear");
-  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-2")).dataset.topology, "linear");
+  assert.equal(query(".rna-fold-thumbnail", customCandidateCard()).dataset.topology, "circular");
+  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-2")).dataset.topology, "circular");
 
   await click(query(".normal-candidate-option", customCandidateCard()));
   assert.equal(query(".normal-sequence-text").textContent, firstSequence);
   assert.deepEqual(schematicState(), firstDrawing, "Selecting an older custom restores its own window and structure drawing");
   assert.equal(windowStartField().value, "-75");
   assertNoAdarChoice();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   assert.equal(sizeField().value, "1");
   await flushScroll();
   assert.equal(scrollLog.length, scrollsAfterSecondApply, "Selecting an existing custom card must not scroll again");
   await click(query(".rna-fold-thumbnail-trigger", customCandidateCard()));
-  assert.equal(query(".rna-fold-panel", foldDialog()).dataset.topology, "linear");
+  assert.equal(query(".rna-fold-panel", foldDialog()).dataset.topology, "circular");
   assert.equal(query("pre", foldDialog()).textContent.split("\n")[0], firstSequence);
   await closeFoldDialog();
   await click(query(".rna-fold-thumbnail-trigger", customCandidateCard("custom-2")));
-  assert.equal(query(".rna-fold-panel", foldDialog()).dataset.topology, "linear");
+  assert.equal(query(".rna-fold-panel", foldDialog()).dataset.topology, "circular");
   assert.equal(query("pre", foldDialog()).textContent.split("\n")[0], secondSequence);
   await closeFoldDialog();
   assert.deepEqual(schematicState(), secondDrawing);
   assert.equal(windowStartField().value, "-70");
   assertNoAdarChoice();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   await click(query(".normal-candidate-option", customCandidateCard()));
   await click(query(".sf-advanced-trigger"));
   await enter(sizeField(), "3");
@@ -1649,11 +1796,11 @@ test("custom candidates retain independent windows and structures under the unif
   assert.equal(designRequests().at(-1).body.adar_environment, "combined");
   const thirdSequence = query(".normal-sequence-text").textContent;
   assert.equal(thirdSequence.length, 148);
-  assert.equal(candidateCards().length, 7);
+  assert.equal(candidateCards().length, 4);
   assert.deepEqual(customCandidateCards().map(card => card.dataset.candidateId), ["custom-1", "custom-2", "custom-3"]);
   assert.equal(customCandidateCard("custom-3").dataset.selected, "true");
-  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-2")).dataset.topology, "linear");
-  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-3")).dataset.topology, "linear");
+  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-2")).dataset.topology, "circular");
+  assert.equal(query(".rna-fold-thumbnail", customCandidateCard("custom-3")).dataset.topology, "circular");
 
   const originalCreateObjectURL = URL.createObjectURL;
   const originalRevokeObjectURL = URL.revokeObjectURL;
@@ -1667,13 +1814,13 @@ test("custom candidates retain independent windows and structures under the unif
     await click(button("Download", result));
     await click(button("JSON", query(".export-menu-options", result)));
     const exported = JSON.parse(await downloads[0].text());
-    assert.equal(exported.candidates.length, 7);
+    assert.equal(exported.candidates.length, 4);
     assert.deepEqual(exported.candidates.filter(candidate => candidate.selected).map(candidate => candidate.id), ["custom-3"]);
     assert.deepEqual(exported.custom_designs.map(snapshot => snapshot.candidate_id), ["custom-1", "custom-2", "custom-3"]);
     for (const [index, expected] of [
-      { sequence: firstSequence, start: 1, window: -75, size: 1, adar: "combined", topology: "linear" },
-      { sequence: secondSequence, start: 6, window: -70, size: 2, adar: "combined", topology: "linear" },
-      { sequence: thirdSequence, start: 1, window: -75, size: 3, adar: "combined", topology: "linear" },
+      { sequence: firstSequence, start: 1, window: -75, size: 1, adar: "combined", topology: "circular" },
+      { sequence: secondSequence, start: 6, window: -70, size: 2, adar: "combined", topology: "circular" },
+      { sequence: thirdSequence, start: 1, window: -75, size: 3, adar: "combined", topology: "circular" },
     ].entries()) {
       const id = `custom-${index + 1}`;
       const snapshot = exported.custom_designs.find(item => item.candidate_id === id);
@@ -1723,8 +1870,8 @@ test("custom candidates retain independent windows and structures under the unif
   respond = successfulRespond;
   await submit();
   assert.equal(customCandidateCards().length, 0);
-  assert.equal(candidateCards().length, 4);
-  assert.equal(query(".normal-sequence-text").textContent, normalOutput.candidates.find(candidate => candidate.id === "dual-deletion").arrna_sequence);
+  assert.equal(candidateCards().length, 1);
+  assert.equal(query(".normal-sequence-text").textContent, normalOutput.candidates[0].arrna_sequence);
 });
 
 test("custom duplex display puts insertions on the guide and mismatches on both strands without pairing unpaired positions", async () => {
@@ -1783,7 +1930,8 @@ test("custom duplex display puts insertions on the guide and mismatches on both 
   assert.ok(pairs.every(relative => relative !== 0 && !structures.some(structure => structure.type !== "insertion" && relative >= structure.start && relative <= structure.end)),
     "Generic connectors must skip every deleted or mismatched target position and the dedicated A0 pair");
   assert.equal(query(".normal-schematic-target-guide text", svg).textContent, "C");
-  assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), direction => direction.textContent), ["5′", "3′", "3′", "5′"]);
+  assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), direction => direction.textContent), ["5′", "3′"]);
+  assertClosedGuideRing(svg);
   for (const selector of [".normal-schematic-target-line", ".normal-schematic-guide-line"]) assert.equal(query(selector, svg).tagName.toLowerCase(), "path");
   const drawingSnapshot = () => Array.from(svg.querySelectorAll("[d], [transform]"), element => [element.getAttribute("d"), element.getAttribute("transform")]);
   const validDrawing = drawingSnapshot();
@@ -1810,7 +1958,8 @@ test("custom duplex display puts insertions on the guide and mismatches on both 
     assert.ok([region.start, region.end, insertion.start, insertion.end].every(Number.isFinite));
     assert.ok(region.end > region.start && insertion.end > insertion.start, "Each adjacent structure must retain its own visible width");
     assert.ok(Math.abs(region.end - insertion.start) < 1e-8, "An insertion after a deletion or mismatch must touch its endpoint without overlapping its span");
-    assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), direction => direction.textContent), ["5′", "3′", "3′", "5′"]);
+    assert.deepEqual(Array.from(svg.querySelectorAll(".normal-schematic-direction"), direction => direction.textContent), ["5′", "3′"]);
+    assertClosedGuideRing(svg);
   }
   await render([]);
   assert.equal(svg.querySelectorAll("g.normal-schematic-bulge").length, 0, "Clearing display structures must remove both upper and lower loops");
@@ -1821,7 +1970,7 @@ test("custom duplex display puts insertions on the guide and mismatches on both 
 test("the shared duplex edits window drafts by keyboard and drag before Apply replaces results", async () => {
   const defaultRespond = respond;
   respond = async (url, body) => url.endsWith("/designs/normal-editing") && body.window_start_relative === -70
-    ? response(shorterNormalOutput) : defaultRespond(url, body);
+    ? response(normalDisplay(body, shorterNormalOutput)) : defaultRespond(url, body);
   await mount();
   await startNormal();
   await submit();
@@ -1841,12 +1990,14 @@ test("the shared duplex edits window drafts by keyboard and drag before Apply re
   assert.equal(preview.dataset.windowStart, "1");
   assert.equal(preview.dataset.windowEnd, "151");
   const fixedPreviewAnchor = pairingAnchor(preview);
+  assertClosedGuideRing(preview);
   const initialGuidePath = query(".normal-schematic-guide-line", preview).getAttribute("d");
   const startHandle = query('[role="slider"][aria-label="Window start boundary"]', selector);
   assert.equal(startHandle.getAttribute("aria-valuenow"), "-75");
   await act(async () => startHandle.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
   assert.equal(windowStartField().value, "-74", "Visual boundary supports keyboard movement");
   assert.equal(preview.dataset.windowStart, "2");
+  assertClosedGuideRing(preview);
   assertPairingAnchor(preview, fixedPreviewAnchor, "Moving the start boundary by keyboard");
   assert.equal(query(".normal-schematic-guide-line", preview).dataset.start, "2");
   assert.notEqual(query(".normal-schematic-guide-line", preview).getAttribute("d"), initialGuidePath, "Keyboard movement must update the displayed guide coverage immediately");
@@ -2008,7 +2159,7 @@ test("only candidate preview enlarge buttons open cached plots, with focus resto
   await settleRequests();
   await flushScroll();
   const candidates = Array.from(document.querySelectorAll(".normal-candidate-option"));
-  const expectedSequences = new Set(normalOutput.candidates.map(candidate => candidate.arrna_sequence));
+  const expectedSequences = new Set(primaryNormalCandidates.map(candidate => candidate.arrna_sequence));
   assert.deepEqual(new Set(foldRequests().map(({ body }) => body.sequence)), expectedSequences);
   assert.equal(foldRequests().length, expectedSequences.size);
   assert.equal(document.querySelectorAll('.normal-candidate-card .rna-fold-thumbnail[data-status="ready"] .rna-fold-thumbnail-svg').length, candidates.length);
@@ -2059,8 +2210,8 @@ test("only candidate preview enlarge buttons open cached plots, with focus resto
   await click(secondTrigger);
   dialog = foldDialog();
   panel = query('.rna-fold-panel[data-status="ready"]', dialog);
-  assert.equal(query("pre", panel).textContent.split("\n")[0], normalOutput.candidates[1].arrna_sequence);
-  assert.equal(query(".normal-sequence-text").textContent, normalOutput.candidates[1].arrna_sequence);
+  assert.equal(query("pre", panel).textContent.split("\n")[0], primaryNormalCandidates[1].arrna_sequence);
+  assert.equal(query(".normal-sequence-text").textContent, primaryNormalCandidates[1].arrna_sequence);
   await act(async () => dialog.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
   assert.equal(document.querySelector(".rna-fold-panel, .rna-fold-modal"), null);
   assert.ok(document.activeElement === secondTrigger, "Escape must restore focus to the triggering candidate");
@@ -2074,7 +2225,7 @@ test("only candidate preview enlarge buttons open cached plots, with focus resto
   assert.equal(foldRequests().length, foldCount, "Opening and closing large plots must reuse cached thumbnail folds");
 });
 
-test("Go uses the unified profile while folding is fixed to linear", async () => {
+test("Go uses the unified profile while folding is fixed to circular", async () => {
   const defaultRespond = respond;
   respond = async (url, body) => url.endsWith("/analysis/rnafold") ? foldResponse(body) : defaultRespond(url, body);
   await mount();
@@ -2083,8 +2234,8 @@ test("Go uses the unified profile while folding is fixed to linear", async () =>
   await submit();
   await settleRequests();
   assertRecommendedNormalRequest(designRequests().at(-1).body, false);
-  assertFixedLinearFolding();
-  assert.equal(document.querySelectorAll('.normal-candidate-card .rna-fold-thumbnail[data-status="ready"][data-topology="linear"]').length, normalOutput.candidates.length);
+  assertFixedCircularFolding();
+  assert.equal(document.querySelectorAll('.normal-candidate-card .rna-fold-thumbnail[data-status="ready"][data-topology="circular"]').length, 2);
   const originalSequence = query(".normal-sequence-text").textContent;
   const initialFoldCount = foldRequests().length;
   await click(query(".sf-advanced-trigger"));
@@ -2097,9 +2248,9 @@ test("Go uses the unified profile while folding is fixed to linear", async () =>
   await settleRequests();
   assertRecommendedNormalRequest(designRequests().at(-1).body, false);
   assertRecommendedNormalSettings();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   await click(thumbnailTrigger(0));
-  assert.equal(query('.rna-fold-panel[data-status="ready"]', foldDialog()).dataset.topology, "linear");
+  assert.equal(query('.rna-fold-panel[data-status="ready"]', foldDialog()).dataset.topology, "circular");
   await closeFoldDialog();
   assert.equal(foldRequests().length, initialFoldCount, "Go reuses cached folds for unchanged sequences and the fixed model");
 });
@@ -2171,7 +2322,7 @@ test("Exon Apply replaces candidates only after submission and exports the displ
   assert.deepEqual(designRequests().at(-1).body.candidate_windows, [{ candidate_id: priorCandidate.id, start: priorCandidate.global_start + 10, end: priorCandidate.global_end }]);
   assert.equal(designRequests().at(-1).body.arrna_length, 151);
   assert.equal(document.querySelectorAll(".normal-candidate-option").length, 1);
-  assert.equal(query('.normal-candidate-option[aria-pressed="true"] .normal-candidate-name').textContent, `${remainingCandidate.label}141 nt`);
+  assert.equal(query('.normal-candidate-option[aria-pressed="true"] .normal-candidate-name').textContent, "SA targeting141 nt");
   assert.equal(query(".exon-result .normal-sequence-text").textContent, remainingCandidate.arrna_sequence);
   assert.equal(exonWindowStartField().value, String(remainingCandidate.global_start));
   assert.equal(exonWindowEndField().value, String(remainingCandidate.global_end));
@@ -2342,7 +2493,7 @@ test("selecting a new target by position or by sequence resets only the window a
   assert.match(query(".wrs-summary").textContent, /151 nt/);
   assertNoAdarChoice();
   assertNoCodingCheckbox();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   await enter(windowStartField(), "-55");
   await enter(windowEndField(), "45");
   await click(entryBase(normalInput.target_position));
@@ -2351,7 +2502,7 @@ test("selecting a new target by position or by sequence resets only the window a
   assert.equal(windowEndField().value, "75");
   assertNoAdarChoice();
   assertNoCodingCheckbox();
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   assert.equal(designRequests().length, 0, "Changing a target must not auto-submit the restored window");
 });
 
@@ -2371,7 +2522,7 @@ test("new sequences, examples and application switches start with recommended de
   assertRecommendedNormalSettings();
   assertNoCodingCheckbox();
   await click(button("Exon skipping", query(".sf-mode-switch")));
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   assertExonWindowOnly();
   assert.ok(query(".wrs-empty", query(".exon-window-selector")));
   await click(button("Try an example"));
@@ -2384,7 +2535,7 @@ test("new sequences, examples and application switches start with recommended de
   await click(entryBase(208));
   assertExonWindowOnly();
   assert.ok(query(".wrs-empty", query(".exon-window-selector")), "A new input discards the previous candidate window draft");
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   await submit();
   assertRecommendedExonRequest(designRequests().at(-1).body);
 
@@ -2405,7 +2556,8 @@ test("restoring recommended settings changes only the draft until Apply and pres
   await flushScroll();
   await click(query(".sf-advanced-trigger"));
   const originalStructureCount = document.querySelectorAll(".sf-structure-row").length;
-  await click(button("Internal bulge", query(".custom-structure-editor")));
+  const internalRow = Array.from(document.querySelectorAll(".sf-structure-row")).find(row => query('input[type="number"]', row).value === "4");
+  await enter(query('input[type="number"]', internalRow), "5");
   await applySettings();
   await settleRequests();
   await flushScroll();
@@ -2443,7 +2595,7 @@ test("restoring recommended settings changes only the draft until Apply and pres
   assert.equal(request.adar_environment, "combined");
   assert.equal(request.window_start_relative, -75);
   assert.equal(request.window_end_relative, 75);
-  assert.equal(request.include_internal_bulge, false);
+  assert.equal(request.include_internal_bulge, true);
   assert.equal(request.coding_context, true);
   assert.equal(customCandidateCards().length, 1, "Applying recommended settings without a custom draft must retain saved custom candidates");
   assert.equal(query(".advanced-inline-panel").hidden, true);
@@ -2458,7 +2610,7 @@ test("restoring recommended settings changes only the draft until Apply and pres
 test("homepage Go uses the unified profile while replacing applied custom settings and ignoring unfinished Advanced drafts", async () => {
   const defaultRespond = respond;
   respond = async (url, body) => url.endsWith("/designs/normal-editing") && body.window_start_relative === -70
-    ? response({ ...shorterNormalOutput, pairing: combinedPairing }) : defaultRespond(url, body);
+    ? response(normalDisplay(body, shorterNormalOutput)) : defaultRespond(url, body);
   await mount({ view: "design", application: "normal_editing", input: {
     mode: "sequence", adar: "ADAR1", sequence: normalInput.sequence,
     position: String(normalInput.target_position), codingContext: false, includeInternalBulge: true,
@@ -2477,8 +2629,8 @@ test("homepage Go uses the unified profile while replacing applied custom settin
   assert.equal(appliedRequest.include_internal_bulge, true);
   assert.equal(appliedRequest.coding_context, false);
   assert.ok(customCandidateCard());
-  assert.ok(Array.from(document.querySelectorAll(".rna-fold-thumbnail")).every(thumbnail => thumbnail.dataset.topology === "linear"));
-  const expectedDefault = normalOutput.candidates.find(candidate => candidate.id === "dual-deletion").arrna_sequence;
+  assert.ok(Array.from(document.querySelectorAll(".rna-fold-thumbnail")).every(thumbnail => thumbnail.dataset.topology === "circular"));
+  const expectedDefault = normalWithInternalOutput.candidates.find(candidate => candidate.id === "dual-deletion-internal-del1").arrna_sequence;
   await submit();
   await settleRequests();
   assertRecommendedNormalRequest(designRequests().at(-1).body, false);
@@ -2486,7 +2638,7 @@ test("homepage Go uses the unified profile while replacing applied custom settin
   assertNoCodingCheckbox();
   assert.equal(customCandidateCard(), null);
   assert.equal(query(".normal-sequence-text").textContent, expectedDefault, "Go must restore the default candidate instead of retaining the previous baseline selection");
-  assert.ok(Array.from(document.querySelectorAll(".rna-fold-thumbnail")).every(thumbnail => thumbnail.dataset.topology === "linear"));
+  assert.ok(Array.from(document.querySelectorAll(".rna-fold-thumbnail")).every(thumbnail => thumbnail.dataset.topology === "circular"));
 
   await click(query(".sf-advanced-trigger"));
   await enter(windowStartField(), "-60");
@@ -2504,7 +2656,7 @@ test("homepage Go uses the unified profile while replacing applied custom settin
   assert.equal(document.querySelector('.custom-structure-editor [role="alert"]'), null);
   assert.equal(query(".normal-sequence-text").textContent, expectedDefault);
   assert.equal(decodeState(window.location.hash).input.windowStart, "-75");
-  assert.equal(decodeState(window.location.hash).input.includeInternalBulge, false);
+  assert.equal(decodeState(window.location.hash).input.includeInternalBulge, true);
 });
 
 test("Exon windows follow the selected candidate, apply independently and reset on homepage Go", async () => {
@@ -2529,6 +2681,7 @@ test("Exon windows follow the selected candidate, apply independently and reset 
   await select(sa);
   const originalOutput = query(".exon-result .normal-sequence-text");
   const preview = query(".exon-window-svg");
+  assertClosedGuideRing(preview);
   const startHandle = query('[role="slider"][aria-label="Window start handle"]');
   await act(async () => startHandle.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
   assert.deepEqual(rangeValues(), [sa.global_start + 1, sa.global_end]);
@@ -2551,6 +2704,7 @@ test("Exon windows follow the selected candidate, apply independently and reset 
     assert.equal(captured.size, 0);
   } finally { track.getBoundingClientRect = originalBounds; }
   assert.equal(preview.dataset.windowEnd, String(sa.global_end - 5));
+  assertClosedGuideRing(preview);
   assert.ok(query(".exon-result .normal-sequence-text") === originalOutput);
   assert.equal(originalOutput.textContent, sa.arrna_sequence);
   assert.equal(query(".exon-result .exon-pairing-svg").dataset.start, String(sa.global_start));
@@ -2580,7 +2734,7 @@ test("Exon windows follow the selected candidate, apply independently and reset 
   assertRecommendedExonRequest(designRequests().at(-1).body);
   assert.equal(query(".normal-sequence-text").textContent, sa.arrna_sequence);
   assert.deepEqual(rangeValues(), [sa.global_start, sa.global_end]);
-  assertFixedLinearFolding();
+  assertFixedCircularFolding();
   await click(query(".sf-advanced-trigger"));
   await enter(exonWindowStartField(), "");
   const beforeGo = designRequests().length;
@@ -2623,6 +2777,7 @@ test("a pending custom Apply cannot replace a later homepage Go result", async (
   await startNormal();
   await submit();
   await settleRequests();
+  await click(query('.normal-candidate-card[data-candidate-id="baseline"] .normal-candidate-option'));
   await click(query(".sf-advanced-trigger"));
   await click(button("Internal bulge", query(".custom-structure-editor")));
   await enter(windowStartField(), "-70");

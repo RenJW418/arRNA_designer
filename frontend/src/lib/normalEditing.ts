@@ -1,3 +1,5 @@
+import { RECOMMENDED_DESIGN_SETTINGS } from "./designDefaults.ts";
+
 export type EditingCategory = "blocked_ga" | "synonymous" | "editable" | "rna";
 
 export interface EditingSite {
@@ -186,7 +188,7 @@ function createDeletionVariant(
   return { id, label, shortLabel, description, arrnaSequence, alignedGuide, deletionCoordinates };
 }
 
-export function designNormalArrnaVariants(design: InitialArrnaDesign, includeInternalBulge = false, environment: NormalDesignEnvironment = "combined"): NormalArrnaVariant[] {
+export function designNormalArrnaVariants(design: InitialArrnaDesign, includeInternalBulge: boolean = RECOMMENDED_DESIGN_SETTINGS.includeInternalBulge, environment: NormalDesignEnvironment = "combined"): NormalArrnaVariant[] {
   if (!validateAdarPairing(design, environment).valid) return [];
   const variants: NormalArrnaVariant[] = [createDeletionVariant(
     design,
@@ -242,4 +244,13 @@ export function designNormalArrnaVariants(design: InitialArrnaDesign, includeInt
     }
   }
   return variants;
+}
+
+export function selectDefaultNormalVariant(variants: NormalArrnaVariant[], includeInternalBulge: boolean = RECOMMENDED_DESIGN_SETTINGS.includeInternalBulge): NormalArrnaVariant | undefined {
+  return (includeInternalBulge ? variants.find(candidate => candidate.id === "dual-deletion-internal-del1") : undefined)
+    ?? variants.find(candidate => candidate.id === "baseline");
+}
+
+export function primaryNormalVariants<T extends { id: string }>(variants: T[]): T[] {
+  return variants.filter(candidate => candidate.id === "baseline" || candidate.id === "dual-deletion-internal-del1");
 }

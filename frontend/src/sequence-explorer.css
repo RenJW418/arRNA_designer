@@ -24,7 +24,7 @@
 .sequence-explorer-keyboard { margin: 0 0 12px; color: var(--seq-muted); font-size: 10px; line-height: 1.6; }
 .sequence-explorer-empty { margin: 22px 0 12px; color: var(--seq-muted); font-size: 12px; line-height: 1.7; }
 .sequence-explorer-regions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin: 14px 0; font-size: 10px; line-height: 1.5; color: var(--seq-muted); }
-.sequence-explorer-regions strong { color: var(--ui-ink); }
+.sequence-explorer-regions strong { color: var(--rna-target); }
 .sequence-explorer-grid { min-width: 0; padding: 6px 0 0; user-select: none; -webkit-user-select: none; }
 .sequence-explorer-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; margin-bottom: 9px; }
 .sequence-explorer-row-position { padding: 8px 9px 0 0; text-align: right; color: var(--ui-muted); font: 10px Arial, sans-serif; font-variant-numeric: tabular-nums; }
@@ -41,16 +41,16 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  color: var(--ui-ink);
+  color: var(--rna-target);
   font: 400 14px/1 Arial, sans-serif;
   cursor: default;
   -webkit-tap-highlight-color: color-mix(in srgb, var(--ui-focus) 12%, transparent);
 }
 .sequence-explorer-letter { display: grid; place-items: center; width: 100%; height: 26px; border-radius: 0; pointer-events: none; }
-.sequence-explorer .sequence-explorer-base.is-selectable { color: var(--ui-gold); font-weight: 600; cursor: pointer; }
+.sequence-explorer .sequence-explorer-base.is-selectable { color: var(--rna-target); font-weight: 600; cursor: pointer; }
 .sequence-explorer.is-exon .sequence-explorer-base.is-selectable { touch-action: none; }
 .sequence-explorer .sequence-explorer-base.in-window { box-shadow: none; }
-.sequence-explorer .sequence-explorer-base.in-flank { color: var(--ui-muted); }
+.sequence-explorer .sequence-explorer-base.in-flank { color: var(--rna-target); }
 .sequence-explorer .sequence-explorer-base.has-annotation.evidence-predicted .sequence-explorer-letter { background: #f2ecfc; }
 .sequence-explorer .sequence-explorer-base.has-annotation.evidence-reference .sequence-explorer-letter { background: #eaf3ff; }
 .sequence-explorer .sequence-explorer-base.has-annotation.evidence-user .sequence-explorer-letter { background: #e9f7ef; }
@@ -59,13 +59,13 @@
 .sequence-explorer:not(.is-exon) .sequence-explorer-base.is-selectable:hover .sequence-explorer-letter { width: 26px; border-radius: 50%; }
 .sequence-explorer .sequence-explorer-base.is-anchor .sequence-explorer-letter { outline: 1px dashed var(--ui-focus); outline-offset: -1px; background: var(--ui-gold-soft); }
 /* Selection and annotation evidence occupy different visual layers. */
-.sequence-explorer.is-exon .sequence-explorer-base { color: var(--ui-ink); font-weight: 400; }
-.sequence-explorer.is-exon .sequence-explorer-base.in-exon .sequence-explorer-letter { background: var(--ui-gold-soft); color: var(--ui-ink); font-weight: 600; }
+.sequence-explorer.is-exon .sequence-explorer-base { color: var(--rna-target); font-weight: 400; }
+.sequence-explorer.is-exon .sequence-explorer-base.in-exon .sequence-explorer-letter { background: var(--ui-gold-soft); color: var(--rna-target); font-weight: 600; }
 .sequence-explorer.is-exon .sequence-explorer-base.in-exon.has-annotation.evidence-predicted .sequence-explorer-letter { box-shadow: inset 0 -2px #cbb3e6; }
 .sequence-explorer.is-exon .sequence-explorer-base.in-exon.has-annotation.evidence-reference .sequence-explorer-letter { box-shadow: inset 0 -2px #96b7dc; }
 .sequence-explorer.is-exon .sequence-explorer-base.in-exon.has-annotation.evidence-user .sequence-explorer-letter { box-shadow: inset 0 -2px #8bb9a0; }
 /* The selected A stays legible above both annotation and hover colors. */
-.sequence-explorer .sequence-explorer-row .sequence-explorer-base.is-target .sequence-explorer-letter { width: 26px; border-radius: 50%; background: var(--ui-accent); color: var(--ui-surface); }
+.sequence-explorer .sequence-explorer-row .sequence-explorer-base.is-target .sequence-explorer-letter { width: 26px; border-radius: 50%; background: var(--ui-gold-soft); color: var(--rna-target); outline: 1.5px solid var(--rna-target); }
 .sequence-explorer .sequence-explorer-base:focus-visible { z-index: 1; outline: none; }
 .sequence-explorer .sequence-explorer-base:focus-visible .sequence-explorer-letter { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
 .sequence-explorer-tick { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); color: var(--ui-muted); font: 400 8px/1 Arial, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
@@ -94,7 +94,7 @@
 .sequence-explorer-feature-detail dl { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 12px 0; font-size: 10px; }
 .sequence-explorer-feature-detail dl div { display: flex; gap: 6px; }
 .sequence-explorer-feature-detail dt { color: var(--seq-muted); }
-.sequence-explorer-feature-detail dd { margin: 0; color: var(--ui-ink); }
+.sequence-explorer-feature-detail dd { margin: 0; color: var(--rna-target); }
 .sequence-explorer-feature-detail .sequence-explorer-evidence-note { color: var(--ui-muted); font-size: 10px; }
 .sequence-explorer-feature-detail a { color: var(--ui-accent); font-size: 11px; text-underline-offset: 3px; }
 .sequence-explorer-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ui-line); }

@@ -1,5 +1,7 @@
 import type { NormalDesignEnvironment, EditingCategory, InitialArrnaDesign, NormalArrnaVariant } from "./normalEditing";
 import type { NcbiCodingReference } from "./exonSkipping";
+import { RECOMMENDED_DESIGN_SETTINGS } from "./designDefaults.ts";
+import { primaryNormalVariants } from "./normalEditing.ts";
 
 export interface RuleCitation {
   label: string;
@@ -142,7 +144,7 @@ export function createNormalEditingRequest(
     reference: referenceSnapshot,
     window_start_relative: options.windowStartRelative ?? -75,
     window_end_relative: options.windowEndRelative ?? 75,
-    include_internal_bulge: options.includeInternalBulge ?? false,
+    include_internal_bulge: options.includeInternalBulge ?? RECOMMENDED_DESIGN_SETTINGS.includeInternalBulge,
     coding_context: options.codingContext ?? true,
   };
 }
@@ -172,9 +174,9 @@ export function normalResultToDesign(result: NormalEditingResult): InitialArrnaD
 }
 
 export function normalResultToVariants(result: NormalEditingResult): NormalArrnaVariant[] {
-  return result.candidates.map((candidate) => ({
+  return primaryNormalVariants(result.candidates).map((candidate) => ({
     id: candidate.id,
-    label: candidate.label,
+    label: candidate.id === "dual-deletion-internal-del1" ? "Three-bulge arRNA" : candidate.label,
     shortLabel: candidate.short_label,
     description: candidate.description,
     arrnaSequence: candidate.arrna_sequence,

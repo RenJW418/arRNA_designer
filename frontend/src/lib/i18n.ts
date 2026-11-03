@@ -244,6 +244,8 @@ const ZH_TEXT: Record<string, string> = {
   "Refine after experiment": "实验后优化",
   "Parameters": "设计参数",
   "Baseline": "基础设计",
+  "Three bulges": "三 bulge 设计",
+  "Three-bulge arRNA": "三 bulge arRNA",
   "Downstream +34": "下游 +34",
   "Upstream −31": "上游 −31",
   "No candidates": "没有候选设计",
@@ -612,6 +614,8 @@ Object.assign(ZH_TEXT, {
   "Candidate details": "候选设计详情",
   "SA and ESE candidates": "SA 与 ESE 候选设计",
   "ESE coverage": "ESE 覆盖范围",
+  "SA targeting": "SA 靶向",
+  "ESE targeting": "ESE 靶向",
   "Ranked arRNA designs": "排序后的 arRNA 设计",
   "Top recommendation": "首选推荐",
   "Candidate": "候选设计",
@@ -651,10 +655,8 @@ Object.assign(ZH_TEXT, {
   "JSON with tested baseline": "JSON（含已测试基线）",
   "The arRNA is shown antiparallel. Confirm the tested baseline; its structures may be changed in the proposed next design.": "arRNA 反平行对齐。确认已测试的基线；下一轮提案中可修改结构。",
   "The tested arRNA and experimental percentages are retained as the baseline. Edits here create a proposed next design. Four structures and ranking weights are software heuristics.": "已测试 arRNA 与实验测量值保留为基线；此处编辑生成下一轮提案。4 个结构的上限和排序权重属于软件策略。",
-  "Nature Protocols final design principles": "Nature Protocols final 设计原则",
   "Universal design": "Universal design",
   "Custom design": "Custom design",
-  "The following panels reproduce Figure 4 of the fixed Nature Protocols manuscript. Target RNA coordinates use A0 = 0; validate each candidate experimentally.": "以下面板直接取自固定的 Nature Protocols 稿件 Fig. 4。Target RNA 坐标以 A0 = 0；候选均需实验验证。",
   "No supported effect rule is available for this candidate; effects remain unknown.": "该候选缺少受支持的效应规则；作用保持未知。",
   "Each evaluated A uses its nearest bulge edge. These directions require experimental validation.": "每个被评估 A 都采用最近的 bulge 边缘；这些作用方向需实验验证。",
   "Optional · unmeasured sites are excluded from scoring": "可选 · 未测量位点不参与评分",
@@ -739,6 +741,8 @@ export function localizeText(language: Language, text: string): string {
   if (ZH_TEXT[text]) return ZH_TEXT[text];
   const customCandidate = text.match(/^Custom (\d+)$/);
   if (customCandidate) return `自定义 ${customCandidate[1]}`;
+  const eseTargetingCandidate = text.match(/^ESE targeting (\d+)$/);
+  if (eseTargetingCandidate) return `ESE 靶向 ${eseTargetingCandidate[1]}`;
   const shortenedSaCandidate = text.match(/^SA candidate is (\d+) nt because the supplied flanking sequence is shorter than (\d+) nt\.$/);
   if (shortenedSaCandidate) return `由于输入的 flank 短于 ${shortenedSaCandidate[2]} nt，SA candidate 长度为 ${shortenedSaCandidate[1]} nt。`;
   const localizedRequirements = text

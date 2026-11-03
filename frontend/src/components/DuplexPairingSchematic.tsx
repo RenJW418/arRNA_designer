@@ -1,6 +1,9 @@
+import { CircularGuideContinuation } from "./CircularGuideContinuation";
+import { DuplexPairingStalks } from "./DuplexPairingStalks";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { EditingSite, InitialArrnaDesign, NormalArrnaVariant } from "../lib/normalEditing";
 import type { SequenceFeature } from "../lib/sequenceAnalysis";
+import { samplePairingPositions } from "../lib/pairingDisplay";
 import { useLanguage } from "./LanguageProvider";
 import "../pairing-overview.css";
 
@@ -106,8 +109,9 @@ function ResultDuplexPairingSchematic({ design, sites, variant, structures }: Du
     && Number.isInteger(feature.size) && feature.size > 0 && feature.start + design.targetIndex >= 0
     && feature.end + design.targetIndex < design.targetWindow.length && feature.end >= feature.start
     && (feature.type === "insertion" ? feature.end === feature.start : feature.end - feature.start + 1 === feature.size));
-  // Reserve the same space above A0 for every candidate, including the baseline.
-  const targetY = 108;
+  // Keep strand geometry fixed across candidates. The viewport crops unused
+  // space above A0 when there are no target-side bulges to display.
+  const targetY = 96;
   const guideY = targetY + 24;
   const windowLength = design.targetWindow.length;
   const relativeLabel = (coordinate: number) => coordinate < 0 ? `A−${Math.abs(coordinate)}` : coordinate > 0 ? `A+${coordinate}` : "A0";
@@ -155,7 +159,8 @@ function ResultDuplexPairingSchematic({ design, sites, variant, structures }: Du
       : targetX + (x - compressedTargetX) / Math.max(right - compressedTargetX, .001) * (right - targetX);
   };
   const xForRelative = (coordinate: number) => xForIndex(design.targetIndex + coordinate);
-  const pairStride = Math.max(1, Math.ceil(10 / step));
+  const pairPositions = samplePairingPositions(0, windowLength - 1, xForIndex, guideY - targetY,
+    index => index !== design.targetIndex && !unpairedCoordinates.has(index - design.targetIndex));
   const bulges = spans.map(span => {
     const startX = xForIndex(span.startIndex, span.type !== "insertion");
     const endX = xForIndex(span.endIndex, span.type === "insertion");
@@ -180,9 +185,14 @@ function ResultDuplexPairingSchematic({ design, sites, variant, structures }: Du
   const targetPath = strandPath("upper", targetY);
   const guidePath = strandPath("lower", guideY);
   const lowerHeight = Math.max(0, ...bulges.map(bulge => bulge.lower?.height ?? 0));
-  const coordinateY = guideY + (lowerHeight ? lowerHeight + 14 : 26);
-  const lowerLabelY = guideY + lowerHeight + 18;
-  const viewHeight = Math.max(coordinateY + 12, guideY + lowerHeight + 10, features.some(feature => feature.type === "insertion") ? lowerLabelY + 30 : 0);
+  const hasInsertion = features.some(feature => feature.type === "insertion");
+  const lowerLabelY = guideY + lowerHeight + 12;
+  // Keep lower loops and their badges inside the ring, with the A0 coordinate
+  // below it. Baseline and all target-side deletion variants retain one layout.
+  const ringDepth = Math.max(32, lowerHeight + (hasInsertion ? 46 : 16));
+  const coordinateY = guideY + ringDepth + 18;
+  const viewHeight = coordinateY + 10;
+  const viewTop = bulges.some(bulge => bulge.upper) ? 0 : targetY - 24;
   const pointForSite = (relative: number) => {
     const bulge = bulges.find(({ start, end, upper }) => upper && relative >= start && relative <= end);
     return bulge?.upper?.pointAt((relative - bulge.start + .5) / bulge.count) ?? { x: xForRelative(relative), y: targetY };
@@ -193,14 +203,15 @@ function ResultDuplexPairingSchematic({ design, sites, variant, structures }: Du
 
   return <section className="normal-pairing-schematic" aria-label={`${variant.shortLabel} target and arRNA overview`}>
     <div className="normal-schematic-scroll">
-      <svg viewBox={`0 0 1000 ${viewHeight}`} data-left={left} data-right={right} data-target-y={targetY} data-guide-y={guideY} role="img" aria-labelledby={`${diagramId}-title`} aria-describedby={`${diagramId}-description`}>
+      <svg viewBox={`0 ${viewTop} 1000 ${viewHeight - viewTop}`} data-left={left} data-right={right} data-target-y={targetY} data-guide-y={guideY} role="img" aria-labelledby={`${diagramId}-title`} aria-describedby={`${diagramId}-description`}>
         <title id={`${diagramId}-title`}>{l("Target and arRNA pairing schematic")}</title>
         <desc id={`${diagramId}-description`}>{language === "zh-CN"
-          ? "双链配对示意图，不按比例绘制。上方为靶 RNA，下方为反向平行的 arRNA。金色环表示未配对的靶区段，绿色环表示 arRNA 插入，紫色表示两条链的内部环。圆点按序列顺序分布。"
-          : "Pairing schematic, not to scale. Target RNA is above the antiparallel arRNA. Gold loops show unpaired target regions; green loops show arRNA insertions; purple shows an internal loop on both strands. A-site dots follow sequence order around each loop."}</desc>
+          ? "双链配对示意图，不按比例绘制。上方为靶 RNA，下方为反向平行的 arRNA。靶 RNA 为黑色，arRNA 为蓝色，凸起为黑色。arRNA 两端向下连接为闭合环；圆点按序列顺序分布。"
+          : "Pairing schematic, not to scale. Target RNA is above the antiparallel arRNA. Target RNA is black, arRNA is blue, and bulges are black. The arRNA backbone connects underneath to form a closed ring. A-site dots follow sequence order around each loop."}</desc>
 
         <path className="normal-schematic-target-line" d={targetPath} />
         <path className="normal-schematic-guide-line" d={guidePath} />
+        <CircularGuideContinuation left={left} right={right} y={guideY} depth={ringDepth} />
         {bulges.map(bulge => <g className="normal-schematic-bulge" data-type={bulge.type} data-start={bulge.start} data-end={bulge.end} data-count={bulge.count} data-start-x={bulge.startX} data-end-x={bulge.endX} data-center-x={bulge.centerX} data-radius-x={bulge.radiusX} key={bulge.id}>
           <title>{detail(bulge)}</title>
           {bulge.upper && <path data-strand="target" className={`normal-schematic-bulge-arc ${bulge.type}`} d={bulge.upper.curve} />}
@@ -211,14 +222,11 @@ function ResultDuplexPairingSchematic({ design, sites, variant, structures }: Du
         <text className="normal-schematic-strand-label guide" x="12" y={guideY + 4}>arRNA</text>
         <text className="normal-schematic-direction" x={left - 14} y={targetY + 4} textAnchor="end">5′</text>
         <text className="normal-schematic-direction" x={right + 14} y={targetY + 4}>3′</text>
-        <text className="normal-schematic-direction guide" x={left - 14} y={guideY + 4} textAnchor="end">3′</text>
-        <text className="normal-schematic-direction guide" x={right + 14} y={guideY + 4}>5′</text>
 
-        {Array.from({ length: Math.floor((windowLength - 1) / pairStride) + 1 }, (_, index) => index * pairStride).map((index) => {
+        {pairPositions.map((index) => {
           const relative = index - design.targetIndex;
-          if (unpairedCoordinates.has(relative) || relative === 0) return null;
           const x = xForIndex(index);
-          return <line className="normal-schematic-pair" data-relative={relative} x1={x} x2={x} y1={targetY + 2} y2={guideY - 2} key={index} />;
+          return <DuplexPairingStalks relative={relative} x={x} targetY={targetY} guideY={guideY} key={index} />;
         })}
         <line className="normal-schematic-target-pair" x1={targetX} x2={targetX} y1={targetY + 9} y2={guideY - 9} />
         {visibleSites.map((site) => {
@@ -347,13 +355,17 @@ function InteractiveDuplexWindow({ design, sites, variant, structures = [], sele
   };
   const firstX = xForPosition(first), lastX = xForPosition(last), targetX = xForPosition(target);
   const lowerHeight = Math.max(0, ...features.filter(item => item.lower).map(item => item.height));
-  const handlesY = guideY + lowerHeight + 19;
+  const hasInsertion = features.some(item => item.feature.type === "insertion");
+  const ringDepth = Math.max(32, lowerHeight + (hasInsertion ? 26 : 16));
+  const handlesY = guideY + ringDepth + 26;
   const featuresY = handlesY + 29;
   const viewHeight = lanes.length ? featuresY + lanes.length * 14 + 23 : handlesY + 38;
+  // Leave room for the A0 label while removing unused target-side loop space.
+  const viewTop = upperFeatures.length ? 0 : targetY - 40;
   const step = length > 1 ? (right - left) / (length - 1) : right - left;
-  const pairStride = Math.max(1, Math.ceil(9 / step));
-  const pairPositions = Array.from({ length: Math.floor((last - first) / pairStride) + 1 }, (_, index) => first + index * pairStride);
   const isUnpaired = (position: number) => upperFeatures.some(feature => position >= target + feature.start && position <= target + feature.end);
+  const pairPositions = samplePairingPositions(first, last, xForPosition, guideY - targetY,
+    position => position !== target && !isUnpaired(position));
   const featureDescription = (segment: WindowFeatureSegment) => segment.features.map(feature => `${feature.label} · ${feature.start}–${feature.end} · ${feature.source} · ${evidenceLabel(feature.evidence)}`).join("; ");
   function updateBoundary(boundary: "start" | "end", position: number) {
     const start = boundary === "start" ? clamp(position, firstPosition, target) : first;
@@ -388,21 +400,22 @@ function InteractiveDuplexWindow({ design, sites, variant, structures = [], sele
   }
   return <section className="normal-pairing-schematic wrs-duplex-preview" aria-label={zh ? "可调整窗口的双链配对图" : "Target and arRNA window overview"}>
     <div className="normal-schematic-scroll">
-      <svg className="wrs-duplex-svg" viewBox={`0 0 1000 ${viewHeight}`} data-coordinate-scale="linear" data-window-start={first} data-window-end={last}
+      <svg className="wrs-duplex-svg" viewBox={`0 ${viewTop} 1000 ${viewHeight - viewTop}`} data-coordinate-scale="linear" data-window-start={first} data-window-end={last}
         data-left={left} data-right={right} data-target-y={targetY} data-guide-y={guideY} role="group" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}>
         <title id={`${id}-title`}>{l("Target and arRNA pairing schematic")}</title>
-        <desc id={`${id}-description`}>{zh ? "完整靶序列按线性坐标展示。arRNA 仅显示所选覆盖区；拖动边界或使用方向键调整窗口。凸起为示意图。" : "Full target sequence on a fixed linear axis. arRNA is shown only within the selected coverage. Drag a boundary or use arrow keys to adjust the window. Loops are schematic."}</desc>
+        <desc id={`${id}-description`}>{zh ? "完整靶序列按线性坐标展示。arRNA 仅显示所选覆盖区；拖动边界或使用方向键调整窗口。蓝色 arRNA 两端向下连接为闭合环。环与凸起均为示意图。" : "Full target sequence on a fixed linear axis. arRNA is shown only within the selected coverage. Drag a boundary or use arrow keys to adjust the window. The blue arRNA backbone connects underneath to form a closed ring. The ring and loops are schematic."}</desc>
         <rect className="wrs-track" ref={trackRef} x={left} y={targetY - 12} width={right - left} height={guideY - targetY + 24} fill="transparent" pointerEvents="none" />
         <rect className="wrs-duplex-coverage" x={firstX - 3} y={targetY - 13} width={Math.max(6, lastX - firstX + 6)} height={guideY - targetY + 26} rx="7" />
         <path className="normal-schematic-target-line" d={strandPath("upper", targetY, left, right)} />
         <path className="normal-schematic-guide-line" data-start={first} data-end={last} d={strandPath("lower", guideY, firstX, lastX)} />
+        <CircularGuideContinuation left={firstX} right={lastX} y={guideY} depth={ringDepth} />
         {features.map(({ feature, start, end, center, height, upper, lower }) => <g className="normal-schematic-bulge" key={feature.id} data-type={feature.type} data-start={feature.start} data-end={feature.end} data-count={feature.size} data-start-x={start} data-end-x={end}>
           <title>{`${feature.type} · ${feature.size} nt · ${relativeLabel(feature.start)}–${relativeLabel(feature.end)}`}</title>
           {upper && <path data-strand="target" className={`normal-schematic-bulge-arc ${feature.type}`} d={upper.curve} />}
           {lower && <path data-strand="guide" className={`normal-schematic-bulge-arc ${feature.type}`} d={lower.curve} />}
           <text className={`wrs-bulge-label ${feature.type}`} x={center} y={feature.type === "insertion" ? guideY + height + 13 : targetY - height - 9} textAnchor="middle">{feature.type === "deletion" ? `${feature.size}/0` : feature.type === "insertion" ? `0/${feature.size}` : `${feature.size}/${feature.size}`}</text>
         </g>)}
-        {pairPositions.filter(position => position !== target && !isUnpaired(position)).map(position => <line className="normal-schematic-pair" data-position={position} data-relative={position - target} key={position} x1={xForPosition(position)} x2={xForPosition(position)} y1={targetY + 2} y2={guideY - 2} />)}
+        {pairPositions.map(position => <DuplexPairingStalks position={position} relative={position - target} key={position} x={xForPosition(position)} targetY={targetY} guideY={guideY} />)}
         <line className="normal-schematic-target-pair" x1={targetX} x2={targetX} y1={targetY + 9} y2={guideY - 9} />
         {sites.filter(site => site.position >= firstPosition && site.position <= lastPosition && site.position !== target).map(site => {
           // Sequence order follows the loop; the selection and feature axes stay fixed.
@@ -418,7 +431,6 @@ function InteractiveDuplexWindow({ design, sites, variant, structures = [], sele
         <g className="normal-schematic-target-guide" transform={`translate(${targetX} ${guideY})`}><circle r="9" /><text textAnchor="middle" dy=".35em">{variant.alignedGuide[design.targetIndex] || "C"}</text></g>
         <text className="normal-schematic-strand-label target" x="12" y={targetY + 4}>{l("Target")}</text><text className="normal-schematic-strand-label guide" x="12" y={guideY + 4}>arRNA</text>
         <text className="normal-schematic-direction" x={left - 12} y={targetY + 4} textAnchor="end">5′</text><text className="normal-schematic-direction" x={right + 12} y={targetY + 4}>3′</text>
-        <text className="normal-schematic-direction guide" x={firstX - 12} y={guideY + 4} textAnchor="end">3′</text><text className="normal-schematic-direction guide" x={lastX + 12} y={guideY + 4}>5′</text>
         <text className="normal-schematic-target-coordinate" x={targetX} y={targetY - 19} textAnchor="middle">A{target} · A0</text>
         {(["start", "end"] as const).map(boundary => {
           const value = boundary === "start" ? first : last, min = boundary === "start" ? firstPosition : target, max = boundary === "start" ? target : lastPosition;

@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeAnalysisSequence, type RnaTopology } from "./sequenceAnalysis";
 import { EMPTY_FOLD_STATE, rnaFoldCache, rnaFoldKey } from "./rnaFoldCache";
+import { RECOMMENDED_DESIGN_SETTINGS } from "./designDefaults";
 
-export function useRnaFold(sequence: string, topology: RnaTopology = "linear", automatic = true) {
+export function useRnaFold(sequence: string, topology: RnaTopology = RECOMMENDED_DESIGN_SETTINGS.foldTopology, automatic = true) {
   const input = useMemo(() => {
     try {
       const normalized = normalizeAnalysisSequence(sequence, "structure");

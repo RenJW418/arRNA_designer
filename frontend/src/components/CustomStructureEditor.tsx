@@ -4,6 +4,7 @@ import { normalResultToDesign, type NormalEditingResult } from "../lib/api";
 import { classifyEditingSites, type NormalDesignEnvironment, type NormalArrnaVariant } from "../lib/normalEditing";
 import { buildCustomDesign, initialCustomStructures, type CustomStructure } from "../lib/customDesign";
 import { createProposalAlignedGuide } from "../lib/bulgeOptimization";
+import { PROTOCOL_TABLE1_PRESETS, createProtocolPresetStructure, getProtocolPresetUnavailable, type ProtocolTable1Preset } from "../lib/protocolTable1";
 import { useLanguage } from "./LanguageProvider";
 import { DuplexPairingSchematic } from "./DuplexPairingSchematic";
 import { WindowRangeSelector, type WindowRangeSelectorProps } from "./WindowRangeSelector";
@@ -24,6 +25,17 @@ const EXTERNAL_PRESETS = [
   { position: 34, size: 10, label: "Downstream +34 · 10/0", zh: "下游 +34 · 10/0" },
 ] as const;
 const INTERNAL_PRESET = { position: 4, size: 1 };
+const TABLE1_GROUPS = (["upstream", "downstream"] as const).flatMap(side =>
+  (["insertion", "deletion", "mismatch"] as const).map(type => ({
+    side, type, notation: type === "insertion" ? "0/n" : type === "deletion" ? "n/0" : "n/n",
+    presets: PROTOCOL_TABLE1_PRESETS.filter(preset => preset.side === side && preset.type === type),
+  })),
+);
+
+function closePresetMenu(element: HTMLElement) {
+  const menu = element.closest<HTMLDetailsElement>(".sf-external-presets");
+  if (menu) { menu.open = false; menu.querySelector<HTMLElement>(":scope > summary")?.focus(); }
+}
 
 export function CustomStructureEditor({ result, variant, structures, onChange, environment: draftEnvironment, windowSelection, windowResetRevision }: Props) {
   const { language } = useLanguage();
@@ -38,7 +50,11 @@ export function CustomStructureEditor({ result, variant, structures, onChange, e
   const targetIndex = windowSelection ? targetPosition - first : result.target_index;
   const specs = useMemo(() => structures ?? initialCustomStructures(variant, environment), [structures, variant, environment]);
   const draft = useMemo(() => buildCustomDesign(targetWindow, targetIndex, environment, specs), [targetWindow, targetIndex, environment, specs]);
-  const update = (id: string, patch: Partial<CustomStructure>) => onChange(specs.map((s) => s.id === id ? { ...s, ...patch } : s));
+  const update = (id: string, patch: Partial<CustomStructure>) => onChange(specs.map((s) => {
+    if (s.id !== id) return s;
+    const geometryChanged = (["type", "position", "size"] as const).some(key => patch[key] !== undefined && patch[key] !== s[key]);
+    return { ...s, ...patch, ...(geometryChanged ? { preset_provenance: undefined } : {}) };
+  }));
   const presetUnavailable = ({ position, size }: { position: number; size: number }) => {
     if (specs.some((s) => s.type === "deletion" && s.position === position && s.size === size)) return tx("Already added", "已添加");
     return buildCustomDesign(targetWindow, targetIndex, environment,
@@ -46,6 +62,13 @@ export function CustomStructureEditor({ result, variant, structures, onChange, e
   };
   const addPreset = (preset: { position: number; size: number }) => {
     if (!presetUnavailable(preset)) onChange([...specs, { id: crypto.randomUUID(), type: "deletion", ...preset }]);
+  };
+  const tablePresetUnavailable = (preset: ProtocolTable1Preset) => {
+    const reason = getProtocolPresetUnavailable(preset, targetWindow, targetIndex, environment, specs);
+    return reason === "Already added" ? tx("Already added", "已添加") : reason;
+  };
+  const addTablePreset = (preset: ProtocolTable1Preset) => {
+    if (!tablePresetUnavailable(preset)) onChange([...specs, createProtocolPresetStructure(preset, crypto.randomUUID())]);
   };
   const internalUnavailable = presetUnavailable(INTERNAL_PRESET);
   const fullContext = Boolean(windowSelection);
@@ -81,14 +104,30 @@ export function CustomStructureEditor({ result, variant, structures, onChange, e
       }}>
         <summary className="sf-text-button"><Plus size={14} aria-hidden="true" />{tx("External bulge", "外部凸起")}<ChevronDown size={13} aria-hidden="true" /></summary>
         <div className="sf-bulge-preset-options">
+          <p className="sf-preset-group-label">{tx("Recommended · Universal design", "推荐 · 通用设计")}</p>
           {EXTERNAL_PRESETS.map((preset) => {
             const unavailable = presetUnavailable(preset);
             return <button type="button" key={preset.position} disabled={Boolean(unavailable)} title={unavailable || undefined} onClick={(event) => {
               addPreset({ position: preset.position, size: preset.size });
-              const menu = event.currentTarget.closest("details");
-              if (menu) { menu.open = false; menu.querySelector("summary")?.focus(); }
+              closePresetMenu(event.currentTarget);
             }}>{tx(preset.label, preset.zh)}</button>;
           })}
+          <div className="sf-protocol-presets">
+            <h4>{tx("Protocol Table 1 · Alternative configurations", "Protocol Table 1 · 替代构型")}</h4>
+            <p className="sf-preset-note">{tx("Screening-derived alternatives require experimental testing; performance at a new target is not guaranteed.", "这些替代构型来自筛选数据，需要逐一实验验证，不保证在新靶点上的性能。")}</p>
+            <p className="sf-preset-source">{tx("Protocol manuscript under review · DOI pending", "Protocol 稿件审稿中 · DOI 待补")}</p>
+            <p className="sf-preset-note">{tx("Select Baseline or remove an overlapping structure to try an alternative. Existing window and paired-flank checks still apply. Insertion and mismatch presets require your own arRNA bases.", "可选择 Baseline，或先移除重叠结构，再尝试替代构型；仍需满足窗口和互补侧翼检查。插入和错配预设需要你填写 arRNA 碱基。")}</p>
+            <div className="sf-protocol-preset-groups">{TABLE1_GROUPS.map(group => <details key={`${group.side}-${group.type}`}>
+              <summary>{group.side === "upstream" ? tx("Upstream", "上游") : tx("Downstream", "下游")} · {group.notation}<ChevronDown size={13} aria-hidden="true" /></summary>
+              <div>{group.presets.map(preset => {
+                const unavailable = tablePresetUnavailable(preset);
+                return <button type="button" key={preset.id} data-protocol-preset={preset.id} disabled={Boolean(unavailable)} title={unavailable || undefined} onClick={event => {
+                  addTablePreset(preset);
+                  closePresetMenu(event.currentTarget);
+                }}>{tx(preset.label, preset.zh)}</button>;
+              })}</div>
+            </details>)}</div>
+          </div>
         </div>
       </details>
       <button type="button" className="sf-text-button" disabled={Boolean(internalUnavailable)} title={internalUnavailable || "+4 · 1/0"} onClick={() => addPreset(INTERNAL_PRESET)}><Plus size={14} aria-hidden="true" />{tx("Internal bulge", "内部凸起")}</button>

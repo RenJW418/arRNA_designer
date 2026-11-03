@@ -1,6 +1,9 @@
+import { CircularGuideContinuation } from "./CircularGuideContinuation";
+import { DuplexPairingStalks } from "./DuplexPairingStalks";
 import { RotateCcw } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { ExonSkippingCandidate, ExonSkippingDesign } from "../lib/exonSkipping";
+import { samplePairingPositions } from "../lib/pairingDisplay";
 import { useLanguage } from "./LanguageProvider";
 import "../pairing-overview.css";
 import "../window-range-selector.css";
@@ -49,12 +52,16 @@ export function ExonWindowSelector({ sequence, exonRange, candidate, design, val
   const [startDraft, setStartDraft] = useState(String(first));
   const [endDraft, setEndDraft] = useState(String(last));
   const minStart = 1, maxStart = anchor ?? last, minEnd = anchor ?? first, maxEnd = Math.max(1, length);
-  const left = 96, right = 956, targetY = 48, guideY = 76, handlesY = 106, exonY = 142;
+  const left = 96, right = 956, targetY = 48, guideY = 76;
+  const ringDepth = 32;
+  const handlesY = guideY + ringDepth + 26;
+  const exonY = handlesY + 36;
+  const viewHeight = exonY + 34;
   const x = (position: number) => length > 1 ? left + (position - 1) / (length - 1) * (right - left) : (left + right) / 2;
   const firstX = x(first), lastX = x(last);
   const step = length > 1 ? (right - left) / (length - 1) : right - left;
-  const pairStride = Math.max(1, Math.ceil(9 / step));
-  const pairPositions = Array.from({ length: Math.floor((last - first) / pairStride) + 1 }, (_, index) => first + index * pairStride);
+  const pairPositions = samplePairingPositions(first, last, x, guideY - targetY,
+    position => position !== actualMismatch);
   const validExon = exonRange && Number.isInteger(exonRange.start) && Number.isInteger(exonRange.end)
     && exonRange.start >= 1 && exonRange.end <= length && exonRange.start <= exonRange.end ? exonRange : null;
   const boundaries = validExon ? [{ label: "SA", position: validExon.start - .5 }, { label: "SD", position: validExon.end + .5 }]
@@ -129,15 +136,16 @@ export function ExonWindowSelector({ sequence, exonRange, candidate, design, val
     <div className="wrs-duplex-panel">
       <section className="normal-pairing-schematic wrs-duplex-preview" aria-label={zh ? "外显子窗口预览" : "Exon window preview"}>
         <div className="normal-schematic-scroll">
-          <svg className="exon-window-svg wrs-duplex-svg" viewBox="0 0 1000 176" role="group" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}
+          <svg className="exon-window-svg wrs-duplex-svg" viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}
             data-coordinate-scale="linear" data-window-start={first} data-window-end={last} data-left={left} data-right={right} data-target-y={targetY} data-guide-y={guideY}>
             <title id={`${id}-title`}>{zh ? "靶序列与 arRNA 窗口" : "Target sequence and arRNA window"}</title>
-            <desc id={`${id}-description`}>{zh ? "完整输入序列使用从 1 开始的绝对坐标。拖动边界或使用方向键调整窗口。A–C 节点仅表示 SA 候选返回序列中的实际错配。" : "Full input sequence using absolute, 1-based coordinates. Drag a boundary or use arrow keys to adjust the window. An A–C node marks only an actual mismatch in the returned SA candidate."}</desc>
+            <desc id={`${id}-description`}>{zh ? "完整输入序列使用从 1 开始的绝对坐标。拖动边界或使用方向键调整窗口。蓝色 arRNA 两端向下连接为闭合环，环形不按比例绘制。A–C 节点仅表示 SA 候选返回序列中的实际错配。" : "Full input sequence using absolute, 1-based coordinates. Drag a boundary or use arrow keys to adjust the window. The blue arRNA backbone connects underneath to form a closed ring, drawn schematically. An A–C node marks only an actual mismatch in the returned SA candidate."}</desc>
             <rect ref={trackRef} className="wrs-track" x={left} y={targetY - 12} width={right - left} height={guideY - targetY + 24} fill="transparent" pointerEvents="none" />
             <rect className="wrs-duplex-coverage" data-start={first} data-end={last} x={firstX - 3} y={targetY - 13} width={Math.max(6, lastX - firstX + 6)} height={guideY - targetY + 26} rx="7" />
             <path className="normal-schematic-target-line" d={`M ${left} ${targetY} H ${right}`} />
             <path className="normal-schematic-guide-line" data-start={first} data-end={last} d={`M ${firstX} ${guideY} H ${lastX}`} />
-            {pairPositions.filter(position => position !== actualMismatch).map(position => <line className="normal-schematic-pair" data-position={position} key={position} x1={x(position)} x2={x(position)} y1={targetY + 2} y2={guideY - 2} />)}
+            <CircularGuideContinuation left={firstX} right={lastX} y={guideY} depth={ringDepth} />
+            {pairPositions.map(position => <DuplexPairingStalks position={position} key={position} x={x(position)} targetY={targetY} guideY={guideY} />)}
             {Array.from(inputSequence).flatMap((base, index) => base === "A" && index + 1 !== actualMismatch ? [<g className="normal-schematic-a rna" key={index} data-position={index + 1} transform={`translate(${x(index + 1)} ${targetY})`}>
               <title>{`A${index + 1}`}</title><circle className="normal-schematic-site-hit" r={Math.min(6, Math.max(2, step * .4))} /><circle className="normal-schematic-site-dot" r={Math.max(.5, Math.min(2.3, step * .3))} />
             </g>] : [])}
@@ -149,7 +157,6 @@ export function ExonWindowSelector({ sequence, exonRange, candidate, design, val
             {boundaries.map(boundary => <g className="exw-splice" data-boundary={boundary.label} data-position={boundary.position} key={boundary.label}><title>{`${boundary.label} · ${boundary.position}`}</title><line x1={x(boundary.position)} x2={x(boundary.position)} y1="24" y2={guideY + 12} /><text x={x(boundary.position)} y="17" textAnchor="middle">{boundary.label}</text></g>)}
             <text className="normal-schematic-strand-label target" x="12" y={targetY + 4}>{zh ? "靶 RNA" : "Target"}</text><text className="normal-schematic-strand-label guide" x="12" y={guideY + 4}>arRNA</text>
             <text className="normal-schematic-direction" x={left - 12} y={targetY + 4} textAnchor="end">5′</text><text className="normal-schematic-direction" x={right + 12} y={targetY + 4}>3′</text>
-            <text className="normal-schematic-direction guide" x={firstX - 12} y={guideY + 4} textAnchor="end">3′</text><text className="normal-schematic-direction guide" x={lastX + 12} y={guideY + 4}>5′</text>
             {(["start", "end"] as const).map(boundary => {
               const position = boundary === "start" ? first : last, min = boundary === "start" ? minStart : minEnd, max = boundary === "start" ? maxStart : maxEnd;
               const separation = Math.max(0, 44 - (lastX - firstX)) / 2;
@@ -164,7 +171,7 @@ export function ExonWindowSelector({ sequence, exonRange, candidate, design, val
               </g>;
             })}
             {validExon && <g><line className="exw-exon-track" x1={left} x2={right} y1={exonY + 4} y2={exonY + 4} /><rect className="exw-exon-region" data-start={validExon.start} data-end={validExon.end} x={x(Math.max(1, validExon.start - .5))} y={exonY} width={Math.max(1, x(Math.min(length, validExon.end + .5)) - x(Math.max(1, validExon.start - .5)))} height="8" rx="4"><title>{`${zh ? "靶外显子" : "Target exon"} · ${validExon.start}–${validExon.end}`}</title></rect></g>}
-            <text className="wrs-sequence-coordinate" x={left} y="170">1</text><text className="wrs-sequence-coordinate" x={right} y="170" textAnchor="end">{length}</text>
+            <text className="wrs-sequence-coordinate" x={left} y={viewHeight - 6}>1</text><text className="wrs-sequence-coordinate" x={right} y={viewHeight - 6} textAnchor="end">{length}</text>
           </svg>
         </div>
       </section>

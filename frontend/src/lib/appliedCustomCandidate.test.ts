@@ -28,7 +28,7 @@ test("applied custom display keeps target columns, actual edits and an independe
   assert.equal(applied.variant.id, "custom-1");
   assert.equal(applied.variant.label, "Custom 1");
   assert.equal(applied.variant.shortLabel, "Custom 1");
-  assert.equal(applied.foldTopology, "linear");
+  assert.equal(applied.foldTopology, "circular");
   assert.equal(applied.variant.arrnaSequence.length, result.target_window.length + 1);
   assert.equal(applied.variant.arrnaSequence, applied.snapshot.arrna_sequence);
   assert.equal(applied.variant.alignedGuide.length, result.target_window.length);
@@ -68,7 +68,7 @@ test("unified downloads preserve all candidates, custom provenance and selected 
   assert.deepEqual(custom.structures, applied.snapshot.structures);
   assert.deepEqual(parsed.custom_design, applied.snapshot);
   assert.equal(parsed.custom_designs[0].candidate_id, "custom-1");
-  assert.equal(parsed.custom_designs[0].fold_topology, "linear");
+  assert.equal(parsed.custom_designs[0].fold_topology, "circular");
   assert.deepEqual(parsed.custom_design.observed_editing_efficiencies, {});
   assert.equal(parsed.provenance_scope, "source_design_service");
   assert.match(serializeFasta(bundle), new RegExp(`>LEAPER_normal_editing_custom-1_selected_5to3\\n${custom.sequence}(?:\\n|$)`));

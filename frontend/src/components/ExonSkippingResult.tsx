@@ -7,6 +7,7 @@ import { useLanguage } from "./LanguageProvider";
 import { RnaFoldThumbnail } from "./RnaFoldThumbnail";
 import { ExonPairingOverview } from "./ExonPairingOverview";
 import type { RnaTopology } from "../lib/sequenceAnalysis";
+import { RECOMMENDED_DESIGN_SETTINGS } from "../lib/designDefaults";
 import "../pairing-overview.css";
 import "../exon-results.css";
 
@@ -52,7 +53,13 @@ const GENERAL_GUIDANCE = new Set([
   "Test individual guides before combinations; compare with SA alone while keeping the total nucleic acid dose constant.",
 ]);
 
-export function ExonSkippingResult({ design, onRevise, onSelectionChange, selectedCandidateId, foldTopology = "linear" }: Props) {
+function candidateTitle(candidate: ExonSkippingCandidate) {
+  return candidate.label
+    .replace(/^SA A[–-]C mismatch$/, "SA targeting")
+    .replace(/^ESE coverage( \d+)?$/, "ESE targeting$1");
+}
+
+export function ExonSkippingResult({ design, onRevise, onSelectionChange, selectedCandidateId, foldTopology = RECOMMENDED_DESIGN_SETTINGS.foldTopology }: Props) {
   const { l } = useLanguage();
   const [selectedId, setSelectedId] = useState(design.candidates[0]?.id ?? "");
   const [copied, setCopied] = useState(false);
@@ -72,7 +79,10 @@ export function ExonSkippingResult({ design, onRevise, onSelectionChange, select
   }
 
   function exportBundle() {
-    return createExonExportBundle(design, selected?.id ?? "");
+    return createExonExportBundle({
+      ...design,
+      candidates: design.candidates.map((candidate) => ({ ...candidate, label: candidateTitle(candidate) })),
+    }, selected?.id ?? "");
   }
 
   function download(format: "fasta" | "csv" | "json") {
@@ -90,10 +100,10 @@ export function ExonSkippingResult({ design, onRevise, onSelectionChange, select
         <aside className="exon-candidate-sidebar" aria-label={l("SA and ESE candidates")}>
           <div className="normal-candidate-picker" role="group" aria-label={l("Choose a candidate")}>
             {design.candidates.map((candidate) => <div className="normal-candidate-card" data-candidate-id={candidate.id} data-selected={candidate.id === selected?.id} key={candidate.id}>
-              <button className="normal-candidate-option" type="button" aria-label={`${candidate.label}, ${candidate.arrna_sequence.length} nt`} aria-pressed={candidate.id === selected?.id} onClick={() => select(candidate)}>
-              <span className="normal-candidate-name"><span title={candidate.label}>{candidate.label}</span><strong>{candidate.arrna_sequence.length} nt</strong></span><small className="normal-candidate-change">{l(candidate.kind === "sa" ? "SA A–C mismatch" : "ESE coverage")}</small>
+              <button className="normal-candidate-option" type="button" aria-label={`${l(candidateTitle(candidate))}, ${candidate.arrna_sequence.length} nt`} aria-pressed={candidate.id === selected?.id} onClick={() => select(candidate)}>
+              <span className="normal-candidate-name"><span title={l(candidateTitle(candidate))}>{l(candidateTitle(candidate))}</span><strong>{candidate.arrna_sequence.length} nt</strong></span>
               </button>
-              <RnaFoldThumbnail sequence={candidate.arrna_sequence} topology={foldTopology} label={candidate.label} onOpen={() => select(candidate)} />
+              <RnaFoldThumbnail sequence={candidate.arrna_sequence} topology={foldTopology} label={l(candidateTitle(candidate))} onOpen={() => select(candidate)} />
             </div>)}
           </div>
         </aside>

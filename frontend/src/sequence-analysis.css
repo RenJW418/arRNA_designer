@@ -54,7 +54,7 @@
 .sa-structure-viewport { height: 390px; max-width: 100%; overflow: auto; overscroll-behavior: contain; background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 12px; }
 .sa-structure-viewport svg { display: block; min-width: 100%; }
 .sa-structure-legend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 12px 0; font-size: 10px; color: var(--ui-muted); }
-.sa-probability-gradient { display: inline-block; width: 100px; height: 7px; border-radius: 7px; background: linear-gradient(90deg, rgb(205, 188, 230), rgb(74, 165, 152)); }
+.sa-probability-gradient { display: inline-block; width: 100px; height: 7px; border-radius: 7px; background: linear-gradient(90deg, rgb(191, 216, 233), rgb(29, 108, 155)); }
 .sa-legend-pair { margin-left: 10px; }
 .sa-base-detail { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; min-height: 37px; border-radius: 7px; padding: 8px 10px; font-size: 11px; background: var(--ui-soft); color: var(--ui-muted); }
 .sa-base-detail strong { color: var(--ui-ink); font: 600 12px ui-monospace, monospace; }

@@ -42,7 +42,7 @@ class NormalEditingRequest(BaseModel):
     adar_environment: Literal["combined", "ADAR1", "ADAR2"] = "combined"
     window_start_relative: int = Field(default=-75, le=0)
     window_end_relative: int = Field(default=75, ge=0)
-    include_internal_bulge: bool = False
+    include_internal_bulge: bool = True
     coding_context: bool = True
     reference: NormalReferenceSnapshot | None = None
 
@@ -78,7 +78,7 @@ class NormalizedSequenceInput(BaseModel):
     coordinate_system: Literal["sequence_1_based"] = "sequence_1_based"
     window_start_relative: int = -75
     window_end_relative: int = 75
-    include_internal_bulge: bool = False
+    include_internal_bulge: bool = True
     coding_context: bool = True
 
 

@@ -35,8 +35,8 @@
 }
 
 .sf-inline-results .normal-tool-result { container-type: inline-size; container-name: candidate-results; }
-.sf-inline-results .normal-tool-result .normal-candidate-picker { gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.sf-inline-results .normal-tool-result .normal-candidate-picker.has-custom-candidate { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.sf-inline-results .normal-tool-result .normal-candidate-picker { gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sf-inline-results .normal-tool-result .normal-candidate-picker.has-custom-candidate { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .sf-inline-results .normal-tool-result .normal-candidate-picker:has(> .normal-candidate-card:last-child:nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .sf-inline-results .normal-tool-result .normal-candidate-picker:has(> .normal-candidate-card:only-child) { grid-template-columns: 1fr; }
 .sf-inline-results .normal-tool-result .normal-candidate-card {
@@ -60,9 +60,9 @@
 .sf-inline-results .normal-tool-result .normal-candidate-card .normal-candidate-option[aria-pressed="true"] {
   display: grid;
   width: 100%;
-  min-height: 75px;
-  padding: 15px 16px 12px;
-  gap: 8px;
+  min-height: 48px;
+  padding: 13px 16px 10px;
+  gap: 0;
   border: 0;
   border-radius: 14px 14px 0 0;
   background: transparent;
@@ -78,6 +78,10 @@
 .sf-inline-results .normal-tool-result .normal-candidate-card[data-selected="true"] .normal-candidate-name { color: var(--ink); }
 .sf-inline-results .normal-tool-result .normal-candidate-change { color: var(--muted); }
 .sf-inline-results .normal-tool-result .normal-candidate-card .rna-fold-thumbnail-frame { padding: 0 16px 13px; border: 0; border-radius: 0 0 14px 14px; background: transparent; box-shadow: none; }
+.sf-inline-results .normal-tool-result .normal-candidate-card .rna-fold-thumbnail { margin-top: 0; padding-top: 5px; }
+.sf-inline-results .normal-tool-result .normal-candidate-card .rna-fold-thumbnail-svg { height: 84px; padding: 10px 28px 8px 4px; }
+.sf-inline-results .normal-tool-result .normal-candidate-card .rna-fold-thumbnail-state { min-height: 107px; }
+.sf-inline-results .normal-tool-result .normal-candidate-card .rna-fold-thumbnail-metrics { padding-top: 3px; font-variant-numeric: tabular-nums; }
 @container candidate-results (max-width: 1060px) {
   .sf-inline-results .normal-tool-result .normal-candidate-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sf-inline-results .normal-tool-result .normal-candidate-picker.has-custom-candidate { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -130,6 +134,7 @@
   background: var(--ui-surface);
 }
 .sf-inline-results .normal-tool-result .normal-sequence-export code.normal-sequence-text {
+  color: var(--rna-guide);
   padding: 18px 20px;
   border: 1px solid var(--line);
   border-radius: 16px;
