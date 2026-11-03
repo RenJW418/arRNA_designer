@@ -4,6 +4,7 @@ import {
   createAutoMismatchSequence,
   evaluateQualitativeEffect,
   validateBulgePlacement,
+  validateProtocolDuplex,
   type BulgeCandidate,
   type OptimizationGoal,
 } from "./bulgeOptimization.ts";
@@ -12,6 +13,7 @@ export interface ObservedAdenosine {
   coordinate: number;
   absolutePosition: number;
   observedEfficiency: number;
+  measurementStatus?: "measured" | "unmeasured";
 }
 
 export interface BulgeRecommendationScore {
@@ -51,6 +53,8 @@ export interface RecommendBulgeDesignsInput {
   beamWidth?: number;
   maximumBulges?: number;
   optimizationGoal?: OptimizationGoal;
+  environment?: "ADAR1" | "ADAR2";
+  alignedGuide?: string;
 }
 
 interface SearchPlacement {
@@ -107,6 +111,7 @@ export function scoreBulgeDesign(
   let overlapPenalty = 0;
 
   for (const site of sites) {
+    if (site.measurementStatus === "unmeasured") continue;
     const evaluation = evaluateQualitativeEffect(site.coordinate, bulges);
     if (evaluation.status === "none") continue;
     const directions = directionsFor(evaluation.effects);
@@ -228,7 +233,7 @@ function createPlacementPool(input: RecommendBulgeDesignsInput): SearchPlacement
   const windowStart = -input.targetIndex;
   const initialBulges = input.initialBulges;
   const placements = input.candidates.flatMap((candidate) => {
-    if (candidate.effectZones.length === 0 || candidate.size > input.targetWindow.length) return [];
+    if (candidate.type === "insertion" || candidate.effectSupport === "unsupported" || candidate.effectZones.length === 0 || candidate.size > input.targetWindow.length) return [];
     const windowEndStart = input.targetWindow.length - input.targetIndex - candidate.size;
     const useful: Array<SearchPlacement & { score: number }> = [];
     for (let start = windowStart; start <= windowEndStart; start += 1) {
@@ -236,6 +241,7 @@ function createPlacementPool(input: RecommendBulgeDesignsInput): SearchPlacement
       if (start <= 0 && end >= 0) continue;
       if (!validateBulgePlacement(initialBulges, { start, size: candidate.size }).valid) continue;
       const placement = createPlacement(candidate, start, input.targetWindow, input.targetIndex);
+      if (input.environment && input.alignedGuide && !validateProtocolDuplex(input.targetWindow, input.alignedGuide, input.targetIndex, [...initialBulges, placement.bulge], input.environment).valid) continue;
       if (!input.sites.some(({ coordinate }) => placement.bulge.effectAt(coordinate) !== null)) continue;
       useful.push({
         ...placement,
@@ -291,6 +297,7 @@ export function recommendBulgeDesigns(input: RecommendBulgeDesignsInput): BulgeR
         if (!validateBulgePlacement(existing, placement.bulge).valid) continue;
         const addedBulges = [...state.addedBulges, placement.bulge];
         const allBulges = [...input.initialBulges, ...addedBulges];
+        if (input.environment && input.alignedGuide && !validateProtocolDuplex(input.targetWindow, input.alignedGuide, input.targetIndex, allBulges, input.environment).valid) continue;
         const key = canonicalKey(addedBulges);
         const nextState: SearchState = {
           placementIndexes: [...state.placementIndexes, placementIndex],
@@ -340,12 +347,14 @@ export function createOptimizedArrnaSequence(
   }
   const aligned = alignedGuide.split("").map((base, index) => {
     const coordinate = index - targetIndex;
-    const occupying = bulges.find(({ start, end }) => coordinate >= start && coordinate <= end);
-    if (occupying?.type === "deletion") return "-";
+    const insertion = bulges.filter((b) => b.type === "insertion" && b.start === coordinate).map((b) => b.insertionBases ?? "").join("");
+    const occupying = bulges.find((b) => b.type !== "insertion" && coordinate >= b.start && coordinate <= b.end);
+    if (occupying?.type === "deletion") return insertion;
     if (occupying?.type === "mismatch") {
-      return occupying.mismatchBases?.[coordinate - occupying.start] ?? "?";
+      return insertion + (occupying.mismatchBases?.[coordinate - occupying.start] ?? "?");
     }
-    return base;
+    return insertion + base;
   });
-  return aligned.filter((base) => base !== "-").reverse().join("");
+  const terminalInsertion = bulges.filter((b) => b.type === "insertion" && b.start === targetWindow.length - targetIndex).map((b) => b.insertionBases ?? "").join("");
+  return (aligned.filter((base) => base !== "-").join("") + terminalInsertion).split("").reverse().join("");
 }

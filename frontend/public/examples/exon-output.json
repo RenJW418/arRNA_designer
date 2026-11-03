@@ -1,0 +1,528 @@
+{
+  "schema_version": "1.0",
+  "application": "exon_skipping",
+  "normalized_input": {
+    "upstream_intron": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAG",
+    "exon": "CACACGACACACGACACACGACACACGACACACGACACACGACACACGACACACGA",
+    "downstream_intron": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+    "combined_length": 359,
+    "coordinate_system": "concatenated_sequence_1_based"
+  },
+  "normalized_upstream_intron": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAG",
+  "normalized_exon": "CACACGACACACGACACACGACACACGACACACGACACACGACACACGACACACGA",
+  "normalized_downstream_intron": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+  "arrna_length": 151,
+  "exon_length": 56,
+  "length_class": "short",
+  "sa_is_canonical": true,
+  "warnings": [
+    "Predicted ESE motifs are candidates for experimental testing, not confirmed functional enhancers.",
+    "Test individual guides before combinations; compare with SA alone while keeping the total nucleic acid dose constant."
+  ],
+  "ese_hits": [
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 1,
+      "end": 7,
+      "sequence": "CACACGA",
+      "a_positions": [
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 1,
+      "end": 7,
+      "sequence": "CACACGA",
+      "a_positions": [
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 7,
+      "end": 13,
+      "sequence": "ACACACG",
+      "a_positions": [
+        7,
+        9,
+        11
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 8,
+      "end": 14,
+      "sequence": "CACACGA",
+      "a_positions": [
+        9,
+        11,
+        14
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 8,
+      "end": 14,
+      "sequence": "CACACGA",
+      "a_positions": [
+        9,
+        11,
+        14
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 14,
+      "end": 20,
+      "sequence": "ACACACG",
+      "a_positions": [
+        14,
+        16,
+        18
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 15,
+      "end": 21,
+      "sequence": "CACACGA",
+      "a_positions": [
+        16,
+        18,
+        21
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 15,
+      "end": 21,
+      "sequence": "CACACGA",
+      "a_positions": [
+        16,
+        18,
+        21
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 21,
+      "end": 27,
+      "sequence": "ACACACG",
+      "a_positions": [
+        21,
+        23,
+        25
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 22,
+      "end": 28,
+      "sequence": "CACACGA",
+      "a_positions": [
+        23,
+        25,
+        28
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 22,
+      "end": 28,
+      "sequence": "CACACGA",
+      "a_positions": [
+        23,
+        25,
+        28
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 28,
+      "end": 34,
+      "sequence": "ACACACG",
+      "a_positions": [
+        28,
+        30,
+        32
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 29,
+      "end": 35,
+      "sequence": "CACACGA",
+      "a_positions": [
+        30,
+        32,
+        35
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 29,
+      "end": 35,
+      "sequence": "CACACGA",
+      "a_positions": [
+        30,
+        32,
+        35
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 35,
+      "end": 41,
+      "sequence": "ACACACG",
+      "a_positions": [
+        35,
+        37,
+        39
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 36,
+      "end": 42,
+      "sequence": "CACACGA",
+      "a_positions": [
+        37,
+        39,
+        42
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 36,
+      "end": 42,
+      "sequence": "CACACGA",
+      "a_positions": [
+        37,
+        39,
+        42
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 42,
+      "end": 48,
+      "sequence": "ACACACG",
+      "a_positions": [
+        42,
+        44,
+        46
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 43,
+      "end": 49,
+      "sequence": "CACACGA",
+      "a_positions": [
+        44,
+        46,
+        49
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 43,
+      "end": 49,
+      "sequence": "CACACGA",
+      "a_positions": [
+        44,
+        46,
+        49
+      ]
+    },
+    {
+      "matrix": "SRp40",
+      "score": 4.97,
+      "start": 49,
+      "end": 55,
+      "sequence": "ACACACG",
+      "a_positions": [
+        49,
+        51,
+        53
+      ]
+    },
+    {
+      "matrix": "SF2/ASF",
+      "score": 6.59,
+      "start": 50,
+      "end": 56,
+      "sequence": "CACACGA",
+      "a_positions": [
+        51,
+        53,
+        56
+      ]
+    },
+    {
+      "matrix": "SF2/ASF IgM-BRCA1",
+      "score": 5.41,
+      "start": 50,
+      "end": 56,
+      "sequence": "CACACGA",
+      "a_positions": [
+        51,
+        53,
+        56
+      ]
+    }
+  ],
+  "ese_regions": [
+    {
+      "start": 1,
+      "end": 56,
+      "a_positions": [
+        2,
+        4,
+        7,
+        9,
+        11,
+        14,
+        16,
+        18,
+        21,
+        23,
+        25,
+        28,
+        30,
+        32,
+        35,
+        37,
+        39,
+        42,
+        44,
+        46,
+        49,
+        51,
+        53,
+        56
+      ],
+      "matrices": [
+        "SF2/ASF",
+        "SF2/ASF IgM-BRCA1",
+        "SRp40"
+      ],
+      "peak_score": 6.59
+    }
+  ],
+  "candidates": [
+    {
+      "id": "sa-1",
+      "kind": "sa",
+      "label": "SA A–C mismatch",
+      "target_sequence": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAGCACACGACACACGACACACGACACACGACACACGACACACGACACACGACACACGACCCCCCCCCCCCCCCCCC",
+      "arrna_sequence": "GGGGGGGGGGGGGGGGGGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "global_start": 76,
+      "global_end": 226,
+      "exon_start": 1,
+      "exon_end": 56,
+      "mismatch_target_position": 151,
+      "mismatch_arrna_position": 76,
+      "covered_a_positions": [
+        2,
+        4,
+        7,
+        9,
+        11,
+        14,
+        16,
+        18,
+        21,
+        23,
+        25,
+        28,
+        30,
+        32,
+        35,
+        37,
+        39,
+        42,
+        44,
+        46,
+        49,
+        51,
+        53,
+        56
+      ],
+      "covered_region_indices": [
+        1
+      ],
+      "partially_covered_region_indices": [],
+      "covered_hit_indices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "mismatch_exon_positions": []
+    },
+    {
+      "id": "ese-1",
+      "kind": "ese",
+      "label": "ESE coverage 1",
+      "target_sequence": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAGCACACGACACACGACACACGACACACGACACACGACACACGACACACGACACACGACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "arrna_sequence": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGUGUCGUGCGCUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "global_start": 106,
+      "global_end": 256,
+      "exon_start": 1,
+      "exon_end": 56,
+      "mismatch_target_position": null,
+      "mismatch_arrna_position": null,
+      "covered_a_positions": [
+        2,
+        4,
+        7,
+        9,
+        11,
+        14,
+        16,
+        18,
+        21,
+        23,
+        25,
+        28,
+        30,
+        32,
+        35,
+        37,
+        39,
+        42,
+        44,
+        46,
+        49,
+        51,
+        53,
+        56
+      ],
+      "covered_region_indices": [
+        1
+      ],
+      "partially_covered_region_indices": [],
+      "covered_hit_indices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "mismatch_exon_positions": [
+        2
+      ]
+    }
+  ],
+  "transcript": null,
+  "exon_number": null,
+  "provenance": {
+    "engine": {
+      "name": "leaper-arrna-engine",
+      "version": "0.2.0"
+    },
+    "ruleset": {
+      "id": "leaper-exon-skipping",
+      "version": "0.2.0",
+      "citations": []
+    }
+  },
+  "reference": null,
+  "design_settings": {
+    "evaluate_covered_ese": true,
+    "ese_mismatch_positions": [
+      2
+    ]
+  },
+  "prediction_settings": {
+    "method": "ESEfinder 3.0",
+    "matrices": [
+      {
+        "name": "SF2/ASF",
+        "threshold": 1.956
+      },
+      {
+        "name": "SF2/ASF IgM-BRCA1",
+        "threshold": 1.867
+      },
+      {
+        "name": "SC35",
+        "threshold": 2.383
+      },
+      {
+        "name": "SRp40",
+        "threshold": 2.67
+      },
+      {
+        "name": "SRp55",
+        "threshold": 2.676
+      }
+    ],
+    "motif_filter": "above-threshold motifs containing A",
+    "region_merging": "overlapping motifs",
+    "coordinate_system": "exon_1_based"
+  }
+}

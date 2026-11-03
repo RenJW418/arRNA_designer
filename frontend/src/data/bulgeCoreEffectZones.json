@@ -1,9 +1,48 @@
 {
-  "version": 1,
-  "coordinate": "A_relative_to_bulge_start",
+  "version": 2,
+  "coordinate": "A_relative_to_nearest_bulge_edge",
   "thresholds": {
     "increase": ">=1.2",
     "decrease": "<=0.8"
+  },
+  "provenance": {
+    "primarySource": {
+      "citation": "Song et al., Cell (2026), \"RNA structure programs endogenous ADAR for precise and efficient editing\"",
+      "title": "RNA structure programs endogenous ADAR for precise and efficient editing",
+      "journal": "Cell",
+      "year": 2026,
+      "doi": "10.1016/j.cell.2026.04.047",
+      "project": "LEAPER 3.0"
+    },
+    "dataset": "Single-bulge sliding experiments from LEAPER 3.0 (Song et al., Cell 2026).",
+    "adarEnvironments": ["ADAR1", "ADAR2"],
+    "bulgeTypes": {
+      "sameBaseMismatch": "Same-base mismatch (N/N): every aligned base pair in the tract is A-A, C-C, G-G, or T-T (U-U in RNA output).",
+      "arRnaDeletion": "arRNA deletion (N/0): a continuous deletion on the arRNA that leaves the aligned target-RNA tract unpaired."
+    },
+    "sizeRange": "1-30 nt",
+    "profileCount": 120,
+    "response": "smoothed5",
+    "analysisWindow": [-50, 50],
+    "minRunLength": 3,
+    "censoredAtBoundary": true,
+    "censoredAtBoundaryMeaning": "Intervals touching the -50 or +50 analysis-window boundary are marked censored because the effect may extend beyond the plotted window.",
+    "thresholdNature": "The 20% core cutoffs (smoothed fold-change >= 1.20 for increase, <= 0.80 for decrease) are an additional analysis rule for effect strength, not an experimental significance threshold.",
+    "effectNature": "Effect zones are qualitative directions, not predicted numerical editing efficiencies.",
+    "multiBulgeCaveat": "Multi-bulge ranking is an experimental heuristic constructed from single-bulge evidence and requires separate validation.",
+    "derivedBy": "NAR/bulge/extract_bulge_effects.py",
+    "methodsRecord": "NAR/bulge/derived/README.md",
+    "sourceLimitations": [
+      "ADAR1 includes L1_DMIPC_split.csv, but no equivalent raw ADAR2 table is present. ADAR2 can therefore be extracted from the supplied processed CSVs but cannot be independently reconstructed from raw measurements in this folder.",
+      "ADAR1/foldchange_del1.pdf duplicates the deletion summary chart rather than the expected 1/0 profile. The derived result uses the corresponding CSV.",
+      "Some PDF peak annotations select the positive-distance enhancement lobe rather than the global maximum of the supplied smoothed CSV profile. The derived files report the actual maximum and minimum within -50 to +50 and retain the full curve.",
+      "The source column name Distance_from_mistmatch contains a spelling error; it is preserved only when reading the original files."
+    ],
+    "unresolved": [
+      "Source smoothing remains unresolved; how smoothed5 was calculated and how its boundaries were handled still require verification.",
+      "Whether biological replicates were aggregated before or after smoothing still requires verification.",
+      "The source convention for position 0 and the construct-level correspondence used for multi-nucleotide misN and delN profiles still require verification."
+    ]
   },
   "zones": {
     "ADAR1": {
@@ -11,19 +50,19 @@
         "1": [],
         "2": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -1,
             "maxDistance": 3,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": -11,
             "effect": "decrease"
@@ -31,25 +70,25 @@
         ],
         "3": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -3,
             "maxDistance": 3,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -21,
             "maxDistance": -9,
             "effect": "decrease"
@@ -57,19 +96,19 @@
         ],
         "4": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 26,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -20,
             "maxDistance": 3,
             "effect": "decrease"
@@ -77,19 +116,19 @@
         ],
         "5": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 25,
             "maxDistance": 29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -20,
             "maxDistance": 3,
             "effect": "decrease"
@@ -97,25 +136,25 @@
         ],
         "6": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 29,
             "maxDistance": 44,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -3,
             "maxDistance": 7,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": -8,
             "effect": "decrease"
@@ -123,25 +162,25 @@
         ],
         "7": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 30,
             "maxDistance": 44,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -8,
             "maxDistance": 8,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": -10,
             "effect": "decrease"
@@ -149,19 +188,19 @@
         ],
         "8": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 30,
             "maxDistance": 44,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 9,
             "effect": "decrease"
@@ -169,19 +208,19 @@
         ],
         "9": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 31,
             "maxDistance": 45,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 11,
             "effect": "decrease"
@@ -189,25 +228,25 @@
         ],
         "10": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 41,
             "maxDistance": 46,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 32,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -24,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 12,
             "effect": "decrease"
@@ -215,19 +254,19 @@
         ],
         "11": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 33,
             "maxDistance": 46,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 13,
             "effect": "decrease"
@@ -235,19 +274,19 @@
         ],
         "12": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 35,
             "maxDistance": 45,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 14,
             "effect": "decrease"
@@ -255,19 +294,19 @@
         ],
         "13": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 47,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 15,
             "effect": "decrease"
@@ -275,19 +314,19 @@
         ],
         "14": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 38,
             "maxDistance": 41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 16,
             "effect": "decrease"
@@ -295,19 +334,19 @@
         ],
         "15": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 40,
             "maxDistance": 43,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 17,
             "effect": "decrease"
@@ -315,13 +354,13 @@
         ],
         "16": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 18,
             "effect": "decrease"
@@ -329,13 +368,13 @@
         ],
         "17": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -25,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 19,
             "effect": "decrease"
@@ -343,13 +382,13 @@
         ],
         "18": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 20,
             "effect": "decrease"
@@ -357,13 +396,13 @@
         ],
         "19": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 21,
             "effect": "decrease"
@@ -371,13 +410,13 @@
         ],
         "20": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 23,
             "effect": "decrease"
@@ -385,13 +424,13 @@
         ],
         "21": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 24,
             "effect": "decrease"
@@ -399,13 +438,13 @@
         ],
         "22": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 24,
             "effect": "decrease"
@@ -413,13 +452,13 @@
         ],
         "23": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 25,
             "effect": "decrease"
@@ -427,13 +466,13 @@
         ],
         "24": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 27,
             "effect": "decrease"
@@ -441,13 +480,13 @@
         ],
         "25": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 27,
             "effect": "decrease"
@@ -455,13 +494,13 @@
         ],
         "26": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 29,
             "effect": "decrease"
@@ -469,13 +508,13 @@
         ],
         "27": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 29,
             "effect": "decrease"
@@ -483,13 +522,13 @@
         ],
         "28": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 30,
             "effect": "decrease"
@@ -497,13 +536,13 @@
         ],
         "29": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 31,
             "effect": "decrease"
@@ -511,13 +550,13 @@
         ],
         "30": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -33,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 33,
             "effect": "decrease"
@@ -527,19 +566,19 @@
       "deletion": {
         "1": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -33,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -3,
             "maxDistance": 2,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": -13,
             "effect": "decrease"
@@ -547,25 +586,25 @@
         ],
         "2": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -3,
             "maxDistance": 3,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": -6,
             "effect": "decrease"
@@ -573,19 +612,19 @@
         ],
         "3": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -38,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 3,
             "effect": "decrease"
@@ -593,25 +632,25 @@
         ],
         "4": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -4,
             "maxDistance": 3,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": -6,
             "effect": "decrease"
@@ -619,19 +658,19 @@
         ],
         "5": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 4,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -48,
             "effect": "decrease"
@@ -639,19 +678,19 @@
         ],
         "6": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 3,
             "effect": "decrease"
@@ -659,13 +698,13 @@
         ],
         "7": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -673,25 +712,25 @@
         ],
         "8": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 4,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -48,
             "effect": "decrease"
@@ -699,19 +738,19 @@
         ],
         "9": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 4,
             "effect": "decrease"
@@ -719,37 +758,37 @@
         ],
         "10": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 35,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -7,
             "maxDistance": 3,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": -10,
             "effect": "decrease"
@@ -757,31 +796,31 @@
         ],
         "11": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -789,37 +828,37 @@
         ],
         "12": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 26,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -8,
             "maxDistance": 4,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": -11,
             "effect": "decrease"
@@ -827,31 +866,31 @@
         ],
         "13": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -859,31 +898,31 @@
         ],
         "14": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -891,31 +930,31 @@
         ],
         "15": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -38,
             "maxDistance": -26,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -923,31 +962,31 @@
         ],
         "16": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 4,
             "effect": "decrease"
@@ -955,31 +994,31 @@
         ],
         "17": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -987,37 +1026,37 @@
         ],
         "18": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 36,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -38,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -9,
             "maxDistance": 4,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": -11,
             "effect": "decrease"
@@ -1025,31 +1064,31 @@
         ],
         "19": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1057,31 +1096,31 @@
         ],
         "20": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 38,
             "maxDistance": 40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1089,25 +1128,25 @@
         ],
         "21": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -27,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1115,19 +1154,19 @@
         ],
         "22": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1135,31 +1174,31 @@
         ],
         "23": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 37,
             "maxDistance": 39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1167,25 +1206,25 @@
         ],
         "24": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 26,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -38,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1193,25 +1232,25 @@
         ],
         "25": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -18,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1219,25 +1258,25 @@
         ],
         "26": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -42,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1245,19 +1284,19 @@
         ],
         "27": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -28,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1265,19 +1304,19 @@
         ],
         "28": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 29,
             "maxDistance": 31,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -17,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1285,19 +1324,19 @@
         ],
         "29": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -19,
             "maxDistance": 4,
             "effect": "decrease"
@@ -1305,19 +1344,19 @@
         ],
         "30": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 28,
             "maxDistance": 30,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -37,
             "maxDistance": -29,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -14,
             "maxDistance": 3,
             "effect": "decrease"
@@ -1329,7 +1368,7 @@
       "mismatch": {
         "1": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -1,
             "maxDistance": 2,
             "effect": "increase"
@@ -1337,7 +1376,7 @@
         ],
         "2": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -29,
             "maxDistance": -23,
             "effect": "increase"
@@ -1345,31 +1384,31 @@
         ],
         "3": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 26,
             "maxDistance": 34,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -31,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 7,
             "maxDistance": 9,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -5,
             "maxDistance": 2,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -14,
             "maxDistance": -9,
             "effect": "decrease"
@@ -1377,25 +1416,25 @@
         ],
         "4": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 25,
             "maxDistance": 33,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -32,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1403,37 +1442,37 @@
         ],
         "5": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 42,
             "maxDistance": 45,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 36,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 4,
             "maxDistance": 10,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -1441,19 +1480,19 @@
         ],
         "6": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 36,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -33,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1461,25 +1500,25 @@
         ],
         "7": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 45,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -32,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1487,31 +1526,31 @@
         ],
         "8": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 41,
             "maxDistance": 47,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 37,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1519,25 +1558,25 @@
         ],
         "9": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1545,25 +1584,25 @@
         ],
         "10": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1571,25 +1610,25 @@
         ],
         "11": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1597,25 +1636,25 @@
         ],
         "12": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1623,25 +1662,25 @@
         ],
         "13": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 9,
             "effect": "decrease"
@@ -1649,25 +1688,25 @@
         ],
         "14": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1675,19 +1714,19 @@
         ],
         "15": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1695,25 +1734,25 @@
         ],
         "16": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1721,19 +1760,19 @@
         ],
         "17": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1741,19 +1780,19 @@
         ],
         "18": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1761,19 +1800,19 @@
         ],
         "19": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1781,19 +1820,19 @@
         ],
         "20": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1801,19 +1840,19 @@
         ],
         "21": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1821,19 +1860,19 @@
         ],
         "22": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1841,19 +1880,19 @@
         ],
         "23": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1861,19 +1900,19 @@
         ],
         "24": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1881,19 +1920,19 @@
         ],
         "25": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1901,19 +1940,19 @@
         ],
         "26": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -49,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1921,19 +1960,19 @@
         ],
         "27": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1941,19 +1980,19 @@
         ],
         "28": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1961,19 +2000,19 @@
         ],
         "29": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 20,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -1981,19 +2020,19 @@
         ],
         "30": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 19,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -2003,19 +2042,19 @@
       "deletion": {
         "1": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 2,
             "maxDistance": 7,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -28,
             "maxDistance": -23,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -5,
             "maxDistance": 0,
             "effect": "decrease"
@@ -2023,31 +2062,31 @@
         ],
         "2": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 27,
             "maxDistance": 32,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 2,
             "maxDistance": 5,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -31,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -6,
             "maxDistance": -1,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": -13,
             "effect": "decrease"
@@ -2055,31 +2094,31 @@
         ],
         "3": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 46,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 26,
             "maxDistance": 35,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -32,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -6,
             "maxDistance": 0,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": -10,
             "effect": "decrease"
@@ -2087,37 +2126,37 @@
         ],
         "4": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 25,
             "maxDistance": 45,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -4,
             "maxDistance": 1,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": -8,
             "effect": "decrease"
@@ -2125,31 +2164,31 @@
         ],
         "5": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 25,
             "maxDistance": 46,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 7,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2157,25 +2196,25 @@
         ],
         "6": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 44,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 10,
             "effect": "decrease"
@@ -2183,25 +2222,25 @@
         ],
         "7": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 48,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 7,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 4,
             "effect": "decrease"
@@ -2209,19 +2248,19 @@
         ],
         "8": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 48,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 12,
             "effect": "decrease"
@@ -2229,25 +2268,25 @@
         ],
         "9": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 49,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 6,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 4,
             "effect": "decrease"
@@ -2255,31 +2294,31 @@
         ],
         "10": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 49,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -34,
             "maxDistance": -22,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -40,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2287,25 +2326,25 @@
         ],
         "11": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 24,
             "maxDistance": 49,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2313,31 +2352,31 @@
         ],
         "12": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 49,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -44,
             "maxDistance": -41,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 7,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -14,
             "maxDistance": 3,
             "effect": "decrease"
@@ -2345,25 +2384,25 @@
         ],
         "13": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 23,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2371,31 +2410,31 @@
         ],
         "14": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2403,25 +2442,25 @@
         ],
         "15": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 49,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 3,
             "effect": "decrease"
@@ -2429,31 +2468,31 @@
         ],
         "16": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 17,
             "maxDistance": 48,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -21,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2461,31 +2500,31 @@
         ],
         "17": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 22,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -35,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -38,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2493,25 +2532,25 @@
         ],
         "18": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 19,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2519,31 +2558,31 @@
         ],
         "19": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 21,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 17,
             "maxDistance": 19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -16,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2551,25 +2590,25 @@
         ],
         "20": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 16,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -20,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2577,25 +2616,25 @@
         ],
         "21": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 17,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -45,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2603,31 +2642,31 @@
         ],
         "22": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 17,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -36,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -46,
             "maxDistance": -39,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 12,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2635,25 +2674,25 @@
         ],
         "23": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2661,25 +2700,25 @@
         ],
         "24": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 16,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -47,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2687,25 +2726,25 @@
         ],
         "25": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -48,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2713,25 +2752,25 @@
         ],
         "26": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2739,25 +2778,25 @@
         ],
         "27": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2765,25 +2804,25 @@
         ],
         "28": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 8,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 1,
             "effect": "decrease"
@@ -2791,25 +2830,25 @@
         ],
         "29": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -19,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"
@@ -2817,25 +2856,25 @@
         ],
         "30": [
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 15,
             "maxDistance": 50,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -50,
             "maxDistance": -18,
             "effect": "increase"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": 9,
             "maxDistance": 11,
             "effect": "decrease"
           },
           {
-            "anchor": "start",
+            "anchor": "nearest-edge",
             "minDistance": -15,
             "maxDistance": 2,
             "effect": "decrease"

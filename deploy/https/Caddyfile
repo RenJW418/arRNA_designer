@@ -1,0 +1,9 @@
+# Optional, undeployed TLS edge; no changes to existing HTTP service required.
+# Domain and upstream must be provided by the operator, never inferred here.
+{$LEAPER_DOMAIN} {
+    reverse_proxy {$LEAPER_HTTPS_UPSTREAM}
+    header X-Content-Type-Options nosniff
+    header Referrer-Policy no-referrer
+    # No access-log directive is enabled. This does not determine the upstream,
+    # container/runtime or hosting-provider logging/retention policies.
+}

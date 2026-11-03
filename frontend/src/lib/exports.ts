@@ -1,5 +1,6 @@
 import type { DesignProvenance, NormalEditingResult } from "./api";
 import type { OptimizationEvidenceState } from "./bulgeOptimization";
+import { getBulgeCoreProvenance, type BulgeCoreProvenance } from "./bulgeOptimization.ts";
 import type { ExonSkippingDesign } from "./exonSkipping";
 
 export interface ExportCandidate {
@@ -16,6 +17,7 @@ export interface DesignExportBundle {
   generated_at: string;
   normalized_input: Record<string, unknown>;
   provenance: DesignProvenance;
+  bulge_provenance: BulgeCoreProvenance;
   candidates: ExportCandidate[];
   evidence?: OptimizationEvidenceState;
   warnings?: string[];
@@ -27,12 +29,15 @@ export function createNormalExportBundle(
   evidence?: OptimizationEvidenceState,
 ): DesignExportBundle {
   return {
+    ...result,
     schema_version: "1.0",
     application: result.application,
     generated_at: new Date().toISOString(),
     normalized_input: result.normalized_input,
     provenance: result.provenance,
+    bulge_provenance: getBulgeCoreProvenance(),
     candidates: result.candidates.map((candidate) => ({
+      ...candidate,
       id: candidate.id,
       label: candidate.label,
       sequence: candidate.arrna_sequence,
@@ -46,12 +51,15 @@ export function createNormalExportBundle(
 
 export function createExonExportBundle(result: ExonSkippingDesign, selectedCandidateId: string): DesignExportBundle {
   return {
+    ...result,
     schema_version: "1.0",
     application: result.application,
     generated_at: new Date().toISOString(),
     normalized_input: result.normalized_input,
     provenance: result.provenance,
+    bulge_provenance: getBulgeCoreProvenance(),
     candidates: result.candidates.map((candidate) => ({
+      ...candidate,
       id: candidate.id,
       label: candidate.label,
       sequence: candidate.arrna_sequence,

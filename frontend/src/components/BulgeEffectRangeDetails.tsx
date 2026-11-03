@@ -26,11 +26,11 @@ export function BulgeEffectRangeDetails({ candidate, environment, onClose, showC
 
   return <section className="bulge-effect-range-details" aria-label={`${environment} ${candidate.label} core effect range`}>
     <header>
-      <div><strong>{environment} · {candidate.size} nt {candidate.type}</strong><span>{l("Relative to source anchor")}</span></div>
+      <div><strong>{environment} · {candidate.size} nt {candidate.type}</strong><span>{l("Relative to nearest evaluated-A edge")}</span></div>
       {showClose && <button type="button" onClick={onClose} aria-label={l("Hide effect range")}>×</button>}
     </header>
     {candidate.effectZones.length === 0
-      ? <p>{l("No core strong-effect zone is mapped for this candidate.")}</p>
+      ? <p>{l("No supported effect rule is available for this candidate; effects remain unknown.")}</p>
       : <>
         <svg viewBox="0 0 600 104" role="img" aria-label={`Core increase and decrease ranges from ${formatRelativeCoordinate(axisStart)} to ${formatRelativeCoordinate(axisEnd)}`}>
           <text className="range-axis-label increase" x="4" y="31">Increase ↑</text>
@@ -38,7 +38,7 @@ export function BulgeEffectRangeDetails({ candidate, environment, onClose, showC
           <line className="range-axis" x1={trackStart} y1="27" x2={trackEnd} y2="27" />
           <line className="range-axis" x1={trackStart} y1="63" x2={trackEnd} y2="63" />
           <line className="range-zero" x1={zeroX} y1="9" x2={zeroX} y2="82" />
-          <text className="range-zero-label" x={zeroX} y="94">source anchor</text>
+          <text className="range-zero-label" x={zeroX} y="94">nearest edge</text>
           {candidate.effectZones.map((zone, index) => {
             const x = trackStart + ((zone.minDistance - axisStart) / axisLength) * trackWidth;
             const width = Math.max(4, ((zone.maxDistance - zone.minDistance + 1) / axisLength) * trackWidth);
@@ -54,7 +54,7 @@ export function BulgeEffectRangeDetails({ candidate, environment, onClose, showC
         <div className="bulge-effect-range-list">
           {candidate.effectZones.map((zone, index) => <span className={zone.effect} key={`${zone.effect}-list-${index}`}><b>{zone.effect === "increase" ? "↑" : "↓"}</b>{formatRelativeCoordinate(zone.minDistance)}–{formatRelativeCoordinate(zone.maxDistance)}</span>)}
         </div>
-        {candidate.size > 1 && <p>{l("Source coordinate anchor is pending confirmation for multi-nucleotide bulges.")}</p>}
+        {candidate.size > 1 && <p>{l("Each evaluated A uses its nearest bulge edge. These directions require experimental validation.")}</p>}
       </>}
   </section>;
 }

@@ -1,3 +1,4 @@
+import { Bulge } from "./bulgeOptimization.ts";
 import type { BulgeCandidate, BulgeType } from "./bulgeOptimization";
 
 export type GuidedStepState = "complete" | "current" | "pending";
@@ -32,4 +33,8 @@ export function getManualGuideCandidate(
   if (selected) return selected;
   const preferredSize = type === "deletion" ? 10 : 5;
   return candidatesOfType.find(({ size }) => size === preferredSize) ?? candidatesOfType[0] ?? null;
+}
+
+export function createRecommendedProposal(recommendation: { allBulges: Bulge[] }): Bulge[] {
+  return recommendation.allBulges.map((bulge) => new Bulge({ ...bulge }));
 }

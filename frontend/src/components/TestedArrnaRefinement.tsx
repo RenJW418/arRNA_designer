@@ -24,7 +24,7 @@ function createEditingSites(duplex: TestedDuplex): EditingSite[] {
     editedCodon: "",
     aminoAcid: "?",
     editedAminoAcid: "?",
-    category: "editable" as const,
+    category: "rna" as const,
   }] : []);
 }
 
@@ -70,6 +70,7 @@ function PairingPreview({ duplex }: { duplex: TestedDuplex }) {
     Array.from({ length: end - start + 1 }, (_, index) => start + index)));
 
   return <div className="tested-pairing-preview" aria-label={l("Inferred target-arRNA alignment")}>
+    {duplex.initialBulges.filter((b) => b.type === "insertion").map((b) => <p key={b.id}>Inserted arRNA before target-relative {b.start}: {b.insertionBases} (aligned 3′→5′), {b.size} nt. Effect unknown.</p>)}
     {chunks.map(({ start, target, guide }) => {
       const style = { "--tested-columns": 30 } as CSSProperties;
       return <section className="tested-pairing-row" style={style} key={start}>
@@ -125,7 +126,7 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
     }
   }
 
-  return <section className="tested-refinement-page">
+  return <section className="tested-refinement-page refinement-tool-page">
     <button className="back-button" type="button" onClick={onExit}><ArrowLeft size={16} aria-hidden="true" />{l("Back to overview")}</button>
     <header className="tested-refinement-header">
       <h1>{l("Optimize a tested arRNA")}</h1>
@@ -153,22 +154,22 @@ export function TestedArrnaRefinement({ seed, onExit }: Props) {
     </form>}
 
     {stage === "confirm" && duplex && <section className="tested-alignment-card">
-      <div className="tested-alignment-heading"><div><h2>{l("Confirm the tested duplex")}</h2><InfoTip>{l("The arRNA is shown antiparallel. Existing structures will be locked when the optimization workspace opens.")}</InfoTip></div><button className="button button-secondary" type="button" onClick={() => setStage("input")}><RotateCcw size={15} />{l("Change input")}</button></div>
+      <div className="tested-alignment-heading"><div><h2>{l("Confirm the tested duplex")}</h2><InfoTip>{l("The arRNA is shown antiparallel. Confirm the tested baseline; its structures may be changed in the proposed next design.")}</InfoTip></div><button className="button button-secondary" type="button" onClick={() => setStage("input")}><RotateCcw size={15} />{l("Change input")}</button></div>
       <dl className="tested-alignment-summary">
         <div><dt>{l("Paired target region")}</dt><dd>{duplex.windowStart}–{duplex.windowEnd} · {duplex.targetWindow.length} nt</dd></div>
         <div><dt>{l("Target")}</dt><dd>A{duplex.targetAPosition} · A–C</dd></div>
         <div><dt>{l("Starting structures")}</dt><dd>{duplex.initialBulges.length}</dd></div>
-        <div><dt>{l("Unsupported effects")}</dt><dd>{duplex.unsupportedStructures.length}</dd></div>
+        <div><dt>{l("Unsupported effects")}</dt><dd>{duplex.initialBulges.filter((b) => b.effectSupport === "unsupported").length}</dd></div>
       </dl>
       {duplex.ambiguous && <div className="tested-alignment-warning" role="note"><strong>{l("Check this alignment carefully.")}</strong><span>{l("More than one alignment received the same score; the displayed alignment is the deterministic first match.")}</span></div>}
-      {duplex.unsupportedStructures.length > 0 && <div className="tested-unsupported-note" role="note"><strong>{l("Locked unsupported mismatch")}</strong><span>{l("It is preserved in the starting arRNA and blocks overlapping bulges, but no effect range is calculated for it.")}</span></div>}
+      {duplex.unsupportedStructures.length > 0 && <div className="tested-unsupported-note" role="note"><strong>{l("Unknown structural effect")}</strong><span>{l("The tested structure is retained as evidence. It may be changed in a proposed next design; no effect rule is available.")}</span></div>}
       <details className="simple-disclosure" open={duplex.ambiguous || duplex.unsupportedStructures.length > 0 || undefined}><summary>{l("Review alignment")}</summary><PairingPreview duplex={duplex} /></details>
       <button className="button button-primary tested-primary-action" type="button" onClick={() => setStage("optimize")}><FlaskConical size={16} />{l("Confirm and enter experimental results")}</button>
     </section>}
 
     {duplex && workspace && <div className="tested-optimization-stage" hidden={stage !== "optimize"}>
       <BulgeOptimizationWorkspace
-        key={`${duplex.targetSequence}-${duplex.arrnaSequence}-${duplex.environment}`}
+        key={`${duplex.targetSequence}-${duplex.arrnaSequence}-${duplex.environment}-${duplex.targetAPosition}`}
         design={workspace.design}
         sites={workspace.sites}
         variant={workspace.variant}

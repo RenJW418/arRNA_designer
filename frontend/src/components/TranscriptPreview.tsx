@@ -7,6 +7,7 @@ interface Props {
   sequence: string;
   position: number;
   sourceLabel?: string;
+  codingContext?: boolean;
   onPositionChange?: (position: number) => void;
 }
 
@@ -14,12 +15,13 @@ const CATEGORY_LABELS: Record<EditingSite["category"], string> = {
   blocked_ga: "GA context, difficult to edit",
   synonymous: "Synonymous A-to-G edit",
   editable: "Editable A-to-G site",
+  rna: "Target RNA adenosine",
 };
 
-export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPositionChange }: Props) {
+export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPositionChange, codingContext = true }: Props) {
   const { l } = useLanguage();
   const safePosition = Math.max(1, Math.min(position || 1, sequence.length || 1));
-  const sites = useMemo(() => classifyEditingSites(sequence), [sequence]);
+  const sites = useMemo(() => classifyEditingSites(sequence, codingContext), [sequence, codingContext]);
   const sitesByPosition = useMemo(
     () => new Map(sites.map((site) => [site.position, site])),
     [sites],
@@ -41,24 +43,7 @@ export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPos
         <p>{l("Reference context")}</p>
         <span>{sourceLabel ?? l(mode === "gene" ? "NCBI reference" : "User sequence")}</span>
       </div>
-      {mode === "gene" ? (
-        <>
-          <div className="transcript-track preview-track">
-            <span className="exon short">49</span><i />
-            <span className="exon medium">50</span><i />
-            <span className="exon target">51</span><i />
-            <span className="exon long">52</span>
-          </div>
-          <div className="preview-stats">
-            <span><strong>Exon 51</strong> {l("selected region")}</span>
-            <span><strong>233 nt</strong> {l("exon length")}</span>
-            <span><strong>− strand</strong> {l("orientation")}</span>
-          </div>
-          <div className="mock-sequence">
-            <span>…CTGGAATGCTGTT</span><mark>A</mark><span>GAGACAGCCTGAA…</span>
-          </div>
-        </>
-      ) : context ? (
+      {context ? (
         <>
           <div className="sequence-window-meta">
             <span>{start + 1}</span>
@@ -75,7 +60,7 @@ export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPos
                     const basePosition = absoluteIndex + 1;
                     const site = sitesByPosition.get(basePosition);
                     const selected = basePosition === safePosition;
-                    const codonEnd = absoluteIndex % 3 === 2;
+                    const codonEnd = codingContext && absoluteIndex % 3 === 2;
                     if (site) {
                       return (
                         <button
@@ -83,7 +68,7 @@ export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPos
                           key={basePosition}
                           className={`sequence-base editing-a ${site.category} ${selected ? "selected" : ""} ${codonEnd ? "codon-end" : ""}`}
                           onClick={() => onPositionChange?.(basePosition)}
-                          title={`${basePosition}: ${CATEGORY_LABELS[site.category]}; ${site.codon} → ${site.editedCodon}; ${site.aminoAcid} → ${site.editedAminoAcid}`}
+                          title={codingContext ? `${basePosition}: ${CATEGORY_LABELS[site.category]}; ${site.codon} → ${site.editedCodon}; ${site.aminoAcid} → ${site.editedAminoAcid}` : `${basePosition}: ${CATEGORY_LABELS[site.category]}`}
                           aria-label={`Position ${basePosition}, ${CATEGORY_LABELS[site.category]}`}
                         >
                           {base}
@@ -104,14 +89,14 @@ export function TranscriptPreview({ mode, sequence, position, sourceLabel, onPos
       ) : (
         <div className="empty-preview">
           <span>ACGT</span>
-          <p>{l("Your in-frame sequence context will appear here.")}</p>
+          <p>{l(mode === "gene" ? "Fetch a reference transcript to view its sequence." : "Your target sequence context will appear here.")}</p>
         </div>
       )}
       <div className="legend editing-legend">
         <span><i className="legend-target" /> {l("Selected site")}</span>
-        <span><i className="legend-editable" /> {l("Editable A")}</span>
+        {codingContext && <><span><i className="legend-editable" /> {l("Editable A")}</span>
         <span><i className="legend-synonymous" /> {l("Synonymous A")}</span>
-        <span><i className="legend-blocked" /> {l("GA, difficult to edit")}</span>
+        <span><i className="legend-blocked" /> {l("GA, difficult to edit")}</span></>}
       </div>
     </aside>
   );

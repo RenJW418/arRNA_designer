@@ -85,7 +85,11 @@ function pairScore(target: string, guide: string, targetIndex: number, selectedI
  * flanks are free. The selected A-C column acts as the biological anchor.
  */
 function alignAntiparallelGuide(target: string, guide: string, selectedIndex: number): AlignmentResult {
-  if (target.length === guide.length) {
+  // Equal lengths alone do not exclude balanced insertions and deletions.
+  // Only a completely paired baseline with the required A-C anchor is unambiguous here.
+  if (target.length === guide.length && target.split("").every((base, index) => (
+    index === selectedIndex ? guide[index] === "C" : isComplementary(base, guide[index])
+  ))) {
     return { target, guide, targetStart: 0, ambiguous: false };
   }
   const rows = target.length + 1;
@@ -167,7 +171,7 @@ function alignAntiparallelGuide(target: string, guide: string, selectedIndex: nu
 interface StructureRun {
   start: number;
   end: number;
-  kind: "deletion" | "supported_mismatch" | "unsupported_mismatch";
+  kind: "deletion" | "insertion" | "supported_mismatch" | "unsupported_mismatch";
   targetBases: string;
   guideBases: string;
 }
@@ -177,7 +181,11 @@ function groupStructures(target: string, guide: string, targetIndex: number): St
   let targetOffset = -1;
   for (let column = 0; column < target.length; column += 1) {
     if (target[column] === "-") {
-      throw new Error("arRNA insertions relative to the target are not supported in this refinement module.");
+      const start = targetOffset + 1 - targetIndex;
+      const previous = runs.at(-1);
+      if (previous?.kind === "insertion" && previous.start === start) previous.guideBases += guide[column];
+      else runs.push({ start, end: start, kind: "insertion", targetBases: "", guideBases: guide[column] });
+      continue;
     }
     targetOffset += 1;
     const relative = targetOffset - targetIndex;
@@ -221,7 +229,7 @@ export function createTestedDuplex(input: TestedDuplexInput): TestedDuplex {
   const displayedGuide = arrnaSequence.split("").reverse().join("");
   const alignment = alignAntiparallelGuide(targetSequence, displayedGuide, input.targetAPosition - 1);
   const targetWindow = alignment.target.replace(/-/g, "");
-  const alignedGuide = alignment.guide;
+  const alignedGuide = alignment.guide.split("").filter((_, i) => alignment.target[i] !== "-").join("");
   const targetIndex = input.targetAPosition - 1 - alignment.targetStart;
   if (targetWindow[targetIndex] !== "A" || alignedGuide[targetIndex] !== "C") {
     throw new Error("The selected target A could not be aligned to C in the arRNA.");
@@ -229,9 +237,9 @@ export function createTestedDuplex(input: TestedDuplexInput): TestedDuplex {
 
   const structures = groupStructures(alignment.target, alignment.guide, targetIndex);
   const initialBulges = structures.map((run, index) => {
-    const size = run.end - run.start + 1;
-    const type = run.kind === "deletion" ? "deletion" : "mismatch";
-    const supported = run.kind !== "unsupported_mismatch";
+    const size = run.kind === "insertion" ? run.guideBases.length : run.end - run.start + 1;
+    const type = run.kind === "insertion" ? "insertion" : run.kind === "deletion" ? "deletion" : "mismatch";
+    const supported = run.kind !== "unsupported_mismatch" && run.kind !== "insertion";
     return new Bulge({
       id: `imported-${run.kind}-${index + 1}`,
       candidateId: supported ? `${type}-${size}` : undefined,
@@ -242,6 +250,7 @@ export function createTestedDuplex(input: TestedDuplexInput): TestedDuplex {
       effectSupport: supported ? "supported" : "unsupported",
       effectZones: supported ? getCoreEffectZones(input.environment, type, size) : [],
       mismatchBases: type === "mismatch" ? run.guideBases : undefined,
+      insertionBases: type === "insertion" ? run.guideBases : undefined,
     });
   });
   const unsupportedStructures = structures.flatMap((run, index) => run.kind === "unsupported_mismatch" ? [{

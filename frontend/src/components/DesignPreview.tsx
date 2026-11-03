@@ -6,6 +6,7 @@ interface Props {
   application: Application;
   sequence: string;
   position: number;
+  sourceLabel?: string;
 }
 
 function SequenceContext({ sequence, position }: Pick<Props, "sequence" | "position">) {
@@ -31,12 +32,12 @@ function SequenceContext({ sequence, position }: Pick<Props, "sequence" | "posit
   );
 }
 
-export function DesignPreview({ mode, application, sequence, position }: Props) {
+export function DesignPreview({ mode, application, sequence, position, sourceLabel }: Props) {
   const { l } = useLanguage();
   const isExonSkipping = application === "exon_skipping";
   const primaryImage = isExonSkipping
-    ? "/figures/leaper-exon-skipping-design.svg"
-    : "/figures/leaper3-universal-design.svg";
+    ? "/figures/leaper-exon-skipping-design.png"
+    : "/figures/leaper3-universal-design.png";
   const title = isExonSkipping ? l("Exon-skipping design") : "LEAPER 3.0 universal design";
 
   return (
@@ -46,26 +47,26 @@ export function DesignPreview({ mode, application, sequence, position }: Props) 
           <p>{l("LEAPER design figure")}</p>
           <strong>{title}</strong>
         </div>
-        <span>{mode === "gene" ? "DMD · NM_004006.3" : l("User sequence")}</span>
+        <span>{sourceLabel ?? l(mode === "gene" ? "NCBI reference" : "User sequence")}</span>
       </div>
       <figure className="design-rule-figure manuscript-figure">
         <a href={primaryImage} target="_blank" rel="noreferrer" aria-label={`Open the full-size ${title} figure`}>
           <img
             src={primaryImage}
             alt={isExonSkipping
-              ? "LEAPER design panel for 151-nucleotide circular arRNA-mediated exon skipping."
-              : "LEAPER 3.0 universal 115-nucleotide arRNA design with 28/0, 1/0 and 10/0 bulges."}
+              ? "Nature Protocols final Figure 4e: circular SA/ESE arRNA design and optional A/C mismatches."
+              : "Nature Protocols final Figure 4a: universal arRNA design, 28/0 at -31, 10/0 at +34 and optional 1/0 at +4."}
           />
         </a>
-        <figcaption>{l("LEAPER design framework · select to enlarge")}</figcaption>
+        <figcaption>Nature Protocols · Fig. 4 · {l("select to enlarge")}</figcaption>
       </figure>
       {!isExonSkipping && mode === "sequence" && <SequenceContext sequence={sequence} position={position} />}
       {!isExonSkipping && (
         <details className="custom-design-details">
           <summary>{l("View the custom-design workflow")}</summary>
-          <a href="/figures/leaper3-custom-design.svg" target="_blank" rel="noreferrer">
+          <a href="/figures/leaper3-custom-design.png" target="_blank" rel="noreferrer">
             <img
-              src="/figures/leaper3-custom-design.svg"
+              src="/figures/leaper3-custom-design.png"
               alt="LEAPER 3.0 custom-design workflow covering target selection, external bulges and internal bulges."
               loading="lazy"
             />
@@ -73,11 +74,11 @@ export function DesignPreview({ mode, application, sequence, position }: Props) 
         </details>
       )}
       <div className="design-rule-facts">
-        <span><strong>{isExonSkipping ? "151 nt" : "115 nt"}</strong> {l("design length")}</span>
+        <span><strong>{isExonSkipping ? "~31–250 nt" : "~73–250 nt"}</strong> {l("illustrated guide range")}</span>
         <span><strong>A–C</strong> {l("target mismatch")}</span>
         <span><strong>{isExonSkipping ? "SA / ESE" : "−31 / +34"}</strong> {l("structural context")}</span>
       </div>
-      <p className="prototype-disclosure">{l("Vector figure · generated candidates follow the connected normal editing or exon skipping workflow.")}</p>
+      <p className="prototype-disclosure">{l("Initial designs require experimental validation of target editing, bystander editing or exon skipping.")}</p>
     </aside>
   );
 }

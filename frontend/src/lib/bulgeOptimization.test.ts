@@ -91,16 +91,16 @@ describe("bulge placement", () => {
     assert.match(result.reason ?? "", /A0/);
   });
 
-  it("removes a user bulge but keeps a structure carried in from the tested arRNA", () => {
+  it("removes a structure from the proposal while retaining the separate baseline", () => {
     const make = (id: string, source: "initial" | "user") => new Bulge({
       id, type: "deletion", start: 10, size: 2, source, effectZones: [],
     });
     const bulges = [make("initial-1", "initial"), make("user-1", "user")];
 
     assert.deepEqual(removeRemovableBulge(bulges, "user-1").map(({ id }) => id), ["initial-1"]);
-    // The starting structure describes what was assayed; it cannot be dropped.
+    // Removal changes the proposed list, not the tested source array.
     assert.deepEqual(removeRemovableBulge(bulges, "initial-1").map(({ id }) => id),
-      ["initial-1", "user-1"]);
+      ["user-1"]);
   });
 
   it("counts initial and user bulges toward the four-bulge maximum", () => {
@@ -200,11 +200,11 @@ describe("automatic mismatch bases", () => {
     assert.equal(mismatch, "ACGUAC");
   });
 
-  it("rejects a non-complementary tract that is not a same-base mismatch", () => {
+  it("allows non-complementary manual mismatches but rejects complementary tracts", () => {
     assert.equal(validateMismatchSequence("AC", "AC"), null);
     assert.match(
-      validateMismatchSequence("AC", "CC") ?? "",
-      /same-base mismatch/i,
+      validateMismatchSequence("AC", "UG") ?? "",
+      /non-complementary/i,
     );
   });
 });
@@ -212,9 +212,9 @@ describe("automatic mismatch bases", () => {
 describe("experimental core-effect zones", () => {
   it("loads only the ADAR1 5-nt mismatch core strong-effect intervals", () => {
     assert.deepEqual(getCoreEffectZones("ADAR1", "mismatch", 5), [
-      { anchor: "start", minDistance: 25, maxDistance: 29, effect: "increase" },
-      { anchor: "start", minDistance: -36, maxDistance: -26, effect: "increase" },
-      { anchor: "start", minDistance: -20, maxDistance: 3, effect: "decrease" },
+      { anchor: "nearest-edge", minDistance: 25, maxDistance: 29, effect: "increase" },
+      { anchor: "nearest-edge", minDistance: -36, maxDistance: -26, effect: "increase" },
+      { anchor: "nearest-edge", minDistance: -20, maxDistance: 3, effect: "decrease" },
     ]);
   });
 
@@ -233,7 +233,7 @@ describe("experimental core-effect zones", () => {
     assert.deepEqual(adar1Candidates.mismatch.map(({ size }) => size), Array.from({ length: 30 }, (_, index) => index + 1));
   });
 
-  it("evaluates source-table ranges relative to the bulge start coordinate", () => {
+  it("evaluates source-table ranges from the nearest bulge edge", () => {
     const bulge = new Bulge({
       id: "experimental",
       type: "mismatch",
@@ -245,8 +245,8 @@ describe("experimental core-effect zones", () => {
 
     assert.equal(bulge.effectAt(80), "decrease");
     assert.equal(bulge.effectAt(74), "increase");
-    assert.equal(bulge.effectAt(125), "increase");
-    assert.equal(bulge.effectAt(105), null);
+    assert.equal(bulge.effectAt(129), "increase");
+    assert.equal(bulge.effectAt(105), "decrease");
   });
 
   it("attaches the matching deletion rule to starting arRNA bulges", () => {
@@ -261,14 +261,11 @@ describe("experimental core-effect zones", () => {
 });
 
 describe("observed efficiency defaults", () => {
-  it("initializes every non-target A to zero and leaves the target A unmeasured", () => {
-    assert.deepEqual(createZeroInitializedEfficiencies([101, 104, 104, 109], 104), {
-      101: 0,
-      109: 0,
-    });
+  it("leaves every target and bystander A unmeasured until entered", () => {
+    assert.deepEqual(createZeroInitializedEfficiencies([101, 104, 104, 109], 104), {});
   });
 
-  it("exports default zero separately from an explicitly measured zero", () => {
+  it("exports unknown separately from an explicitly measured zero", () => {
     const evidence = createOptimizationEvidenceState(
       "source-1",
       { 101: 0, 104: 0 },
@@ -279,7 +276,7 @@ describe("observed efficiency defaults", () => {
     );
 
     assert.deepEqual(evidence.observed_editing_status, {
-      101: "default_zero",
+      101: "unmeasured",
       104: "measured",
     });
     assert.equal(evidence.optimization_goal, "preserve-target");
@@ -346,7 +343,7 @@ describe("bulge overview geometry", () => {
     assert.equal(geometry.visibleSize, 3);
   });
 
-  it("maps a start-relative core-effect interval and preserves its inclusive width", () => {
+  it("maps a nearest-edge core-effect interval across both tract sides", () => {
     const bulge = new Bulge({
       id: "effect",
       type: "mismatch",
@@ -357,11 +354,11 @@ describe("bulge overview geometry", () => {
     });
     const zone = { anchor: "start" as const, minDistance: -20, maxDistance: 3, effect: "decrease" as const };
 
-    assert.deepEqual(createAbsoluteEffectZoneInterval(bulge, zone), { start: -20, end: 3 });
+    assert.deepEqual(createAbsoluteEffectZoneInterval(bulge, zone), { start: -20, end: 7 });
     const geometry = createEffectZoneOverviewGeometry(bulge, zone, -75, 75);
     assert.equal(geometry?.startFraction, 55 / 151);
-    assert.equal(geometry?.endFraction, 79 / 151);
-    assert.ok(Math.abs((geometry?.widthFraction ?? 0) - 24 / 151) < Number.EPSILON);
+    assert.equal(geometry?.endFraction, 83 / 151);
+    assert.ok(Math.abs((geometry?.widthFraction ?? 0) - 28 / 151) < Number.EPSILON);
   });
 
   it("clips an effect interval at the overview edge and omits an invisible interval", () => {
@@ -378,7 +375,7 @@ describe("bulge overview geometry", () => {
 
     const geometry = createEffectZoneOverviewGeometry(bulge, clippedZone, -75, 75);
     assert.equal(geometry?.visibleStart, -75);
-    assert.equal(geometry?.visibleEnd, -68);
+    assert.equal(geometry?.visibleEnd, -64);
     assert.equal(createEffectZoneOverviewGeometry(bulge, hiddenZone, -75, 75), null);
   });
 });

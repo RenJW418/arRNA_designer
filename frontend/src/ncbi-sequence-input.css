@@ -1,0 +1,88 @@
+.sequence-first-workspace .sf-ncbi-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 16px 20px 18px;
+  border: 1px solid var(--ui-line);
+  border-radius: 18px;
+  background: var(--ui-surface);
+  box-shadow: 0 3px 12px rgba(48, 43, 33, .04);
+  color: var(--ui-ink);
+  font: 13px/1.5 Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.sequence-first-workspace .sf-ncbi-input[hidden],
+.sequence-first-workspace .sf-ncbi-input [hidden] { display: none; }
+.sf-ncbi-input .sf-ncbi-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sf-ncbi-input .sf-ncbi-heading > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
+.sf-ncbi-input .sf-ncbi-heading strong { font-size: 13px; font-weight: 600; }
+.sf-ncbi-input .sf-ncbi-heading p { margin: 0; color: var(--ui-muted); font-size: 13px; }
+.sf-ncbi-input .sf-ncbi-close { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; margin: -5px -6px -5px 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ui-muted); cursor: pointer; }
+.sf-ncbi-input .sf-ncbi-close:hover { background: var(--ui-soft); color: var(--ui-ink); }
+.sf-ncbi-input .sf-ncbi-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.sf-ncbi-input .sf-ncbi-field { display: flex; flex: 1 1 150px; flex-direction: column; gap: 5px; min-width: 0; }
+.sf-ncbi-input .sf-ncbi-gene { flex-grow: 1.2; }
+.sf-ncbi-input .sf-ncbi-exon { flex: 0 1 106px; }
+.sf-ncbi-input .sf-ncbi-custom-species { flex-basis: 200px; }
+.sf-ncbi-input .sf-ncbi-field label { color: var(--ui-muted); font: 13px/1.4 Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+.sf-ncbi-input .sf-ncbi-field :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  margin: 0;
+  padding-block: 9px;
+  padding-left: 11px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background-color: var(--ui-surface);
+  color: var(--ui-ink);
+  font: 14px/1.4 Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.sf-ncbi-input .sf-ncbi-field input { padding-right: 11px; }
+.sf-ncbi-input .sf-ncbi-field input::placeholder { color: var(--ui-disabled-ink); }
+.sf-ncbi-input .sf-ncbi-fetch { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; min-width: 84px; min-height: 40px; margin-left: auto; padding: 9px 16px; border: 1px solid var(--ui-accent); border-radius: 10px; background: var(--ui-accent); color: var(--ui-surface); font: 500 13px/1.4 Arial, "PingFang SC", "Microsoft YaHei", sans-serif; cursor: pointer; }
+.sf-ncbi-input .sf-ncbi-fetch:hover:not(:disabled) { border-color: var(--ui-accent-hover); background: var(--ui-accent-hover); }
+.sf-ncbi-input .sf-ncbi-fetch:disabled { border-color: var(--ui-line); background: var(--ui-soft); color: var(--ui-disabled-ink); cursor: default; }
+.sf-ncbi-input .sf-ncbi-transcript { margin-top: 13px; }
+.sf-ncbi-input .sf-ncbi-transcript-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--ui-muted); font: inherit; cursor: pointer; }
+.sf-ncbi-input .sf-ncbi-transcript-toggle:hover { color: var(--ui-ink); }
+.sf-ncbi-input .sf-ncbi-transcript-toggle svg { transform: rotate(-90deg); transition: transform .15s ease; }
+.sf-ncbi-input .sf-ncbi-transcript-toggle[aria-expanded="true"] svg { transform: rotate(0); }
+.sf-ncbi-input .sf-ncbi-transcript > .sf-ncbi-field { width: min(100%, 360px); margin-top: 7px; }
+.sf-ncbi-input .sf-ncbi-error { margin: 13px 0 0; padding: 10px 12px; border: 1px solid #decac3; border-radius: 9px; background: #faf4f1; color: #8a443b; overflow-wrap: anywhere; font-size: 13px; }
+.sf-ncbi-input :is(button, input, select):focus-visible,
+.sf-input-status .sf-ncbi-trigger:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
+.sf-ncbi-input .sf-ncbi-spinner { animation: sf-ncbi-spin 1s linear infinite; }
+@keyframes sf-ncbi-spin { to { transform: rotate(360deg); } }
+
+.sf-input-status .sf-ncbi-trigger { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 7px; border: 0; border-radius: 7px; background: transparent; color: var(--ui-muted); font: inherit; white-space: nowrap; cursor: pointer; }
+.sf-input-status .sf-ncbi-trigger:hover,
+.sf-input-status .sf-ncbi-trigger[aria-expanded="true"] { background: var(--ui-soft); color: var(--ui-ink); }
+.sf-input-status .sf-ncbi-trigger span { margin: 0; }
+.sf-ncbi-source { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; min-width: 0; margin: 10px 24px 0; color: var(--ui-muted); font: 12px/1.6 Arial, "PingFang SC", "Microsoft YaHei", sans-serif; overflow-wrap: anywhere; }
+.sf-ncbi-source > :is(span, strong, code) { min-width: 0; margin: 0; font: inherit; overflow-wrap: anywhere; }
+.sf-ncbi-source strong { color: var(--ui-ink); font-weight: 500; }
+.sf-input-status .sf-ncbi-source { flex: 1 1 100%; margin: 0; }
+
+@media (max-width: 600px) {
+  .sequence-first-workspace .sf-ncbi-input { padding: 15px; border-radius: 15px; }
+  .sf-ncbi-input .sf-ncbi-fields { gap: 11px; }
+  .sf-ncbi-input .sf-ncbi-field { flex-basis: calc(50% - 6px); }
+  .sf-ncbi-input .sf-ncbi-custom-species { flex-basis: 100%; }
+  .sf-ncbi-input .sf-ncbi-exon { flex: 1 1 calc(50% - 6px); }
+  .sf-ncbi-input .sf-ncbi-fetch { flex: 1 1 calc(50% - 6px); }
+  .sf-ncbi-source { margin-inline: 4px; }
+}
+@media (max-width: 360px) {
+  .sf-ncbi-input .sf-ncbi-field,
+  .sf-ncbi-input .sf-ncbi-fetch { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-ncbi-input .sf-ncbi-spinner { animation: none; }
+  .sf-ncbi-input .sf-ncbi-transcript-toggle svg { transition: none; }
+}
+@media (forced-colors: active) {
+  .sf-ncbi-input .sf-ncbi-fetch { border-color: ButtonText; }
+  .sf-ncbi-input .sf-ncbi-fetch:disabled { border-color: GrayText; color: GrayText; }
+  .sf-ncbi-input .sf-ncbi-error { border-color: CanvasText; background: Canvas; color: CanvasText; }
+}
